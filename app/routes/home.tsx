@@ -137,7 +137,7 @@ function formatRemaining(value: string | null, now: number) {
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "よりみち便箋 — ことばを、そっとつないで。" },
+    { title: "ことのは便箋 — ことばを、そっとつないで。" },
     {
       name: "description",
       content: "匿名で便箋をつくり、ひとことを添えて次の人へ回す掲示板です。",
@@ -264,19 +264,18 @@ export default function Home() {
   return (
     <div className="site-shell">
       <header className="topbar">
-        <a className="brand" href={appBaseUrl} aria-label="よりみち便箋 ホーム">
+        <a className="brand" href={appBaseUrl} aria-label="ことのは便箋 ホーム">
           <span className="brand-mark" aria-hidden="true">
             <span />
             <span />
             <span />
           </span>
-          <span>よりみち<span className="brand-light">便箋</span></span>
+          <span>ことのは<span className="brand-light">便箋</span></span>
         </a>
         <div className="topbar-note">
           <span className="online-dot" />
           <span>ことばを、そっとつないで。</span>
         </div>
-        <a className="topbar-link" href="#about">遊びかた <span aria-hidden="true">↗</span></a>
       </header>
 
       <main className="main-layout">
@@ -345,7 +344,7 @@ export default function Home() {
                     <strong>新しい便箋をつくる</strong>
                     <span>
                       {session
-                        ? `作成に ${session.settings.createLetterCost} クレジット`
+                        ? `${session.settings.createLetterCost} クレジットを消費します`
                         : "ことばを便箋にしたためましょう"}
                     </span>
                   </div>
@@ -420,7 +419,7 @@ export default function Home() {
                         <div className="letter-card-heading">
                           <span className="letter-stamp" aria-hidden="true">✉</span>
                           <div>
-                            <strong>{letter.returned ? "作成者に返ってきました" : "便箋が届きました"}</strong>
+                            <strong>{letter.returned ? "便箋が返ってきました" : "便箋が届きました"}</strong>
                             <time dateTime={letter.createdAt}>{formatDate(letter.createdAt)} に作成</time>
                           </div>
                           {!letter.returned && (
@@ -581,8 +580,8 @@ export default function Home() {
           </div>
 
           <footer className="site-footer">
-            <span>よりみち便箋 <span className="footer-sparkle">✳</span></span>
-            <span>ことばが、よいよりみちになりますように。</span>
+            <span>ことのは便箋 <span className="footer-sparkle">✳</span></span>
+            <span>ことばが、よいことのはになりますように。</span>
           </footer>
         </div>
       </main>

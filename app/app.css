@@ -1042,7 +1042,7 @@ textarea:focus-visible {
 }
 
 .welcome-card p {
-  max-width: 175px;
+  max-width: 160px;
   margin: 0;
   color: #666473;
   font-size: 12px;
