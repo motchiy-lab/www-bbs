@@ -16,6 +16,11 @@ type Post = {
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 const apiPrefix = apiBaseUrl.endsWith("/www-bbs") ? "" : "/www-bbs";
+const appBaseUrl = import.meta.env.BASE_URL;
+
+function emojiUrl(file: string) {
+  return `${appBaseUrl}emojis/${encodeURIComponent(file)}`;
+}
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   if (!apiBaseUrl) {
@@ -58,7 +63,7 @@ function renderBody(body: string, emojis: Emoji[]) {
     return emoji ? (
       <img
         className="inline-emoji"
-        src={`/emojis/${encodeURIComponent(emoji.file)}`}
+        src={emojiUrl(emoji.file)}
         alt={`:${emoji.code}:`}
         title={emoji.label}
         key={`${emoji.code}-${index}`}
@@ -96,6 +101,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const loadBoard = useCallback(async () => {
@@ -164,7 +170,7 @@ export default function Home() {
   return (
     <div className="site-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="よりみち掲示板 ホーム">
+        <a className="brand" href={appBaseUrl} aria-label="よりみち掲示板 ホーム">
           <span className="brand-mark" aria-hidden="true">
             <span />
             <span />
@@ -179,7 +185,32 @@ export default function Home() {
         <a className="topbar-link" href="#about">この掲示板について <span aria-hidden="true">↗</span></a>
       </header>
 
-      <main className="page-layout">
+      <nav className="side-menu" aria-label="ページ内メニュー">
+        <a href="#composer">ひとことを投稿</a>
+        <a href="#posts">みんなの投稿</a>
+        <a href="#emojis">掲示板の絵文字</a>
+        <a href="#about">この掲示板について</a>
+      </nav>
+      <button
+        className="menu-toggle"
+        type="button"
+        aria-label={menuOpen ? "メニューを閉じる" : "メニューを開く"}
+        aria-expanded={menuOpen}
+        aria-controls="mobile-menu"
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <span aria-hidden="true">{menuOpen ? "×" : "☰"}</span>
+      </button>
+      <main className="main-layout">
+        {menuOpen && (
+          <nav id="mobile-menu" className="mobile-menu" aria-label="ページ内メニュー">
+            <a href="#composer" onClick={() => setMenuOpen(false)}>ひとことを投稿</a>
+            <a href="#posts" onClick={() => setMenuOpen(false)}>みんなの投稿</a>
+            <a href="#emojis" onClick={() => setMenuOpen(false)}>掲示板の絵文字</a>
+            <a href="#about" onClick={() => setMenuOpen(false)}>この掲示板について</a>
+          </nav>
+        )}
+        <div className="container page-layout">
         <section className="intro" aria-labelledby="page-title">
           <div className="intro-copy">
             <div className="eyebrow"><span className="eyebrow-line" /> A LITTLE PLACE TO TALK</div>
@@ -215,7 +246,7 @@ export default function Home() {
               <span className="post-count">{posts.length}<span> 件</span></span>
             </div>
 
-            <form className="composer card" onSubmit={submitPost}>
+            <form id="composer" className="composer card" onSubmit={submitPost}>
               <div className="composer-heading">
                 <div className="avatar avatar-compose">✎</div>
                 <div>
@@ -257,7 +288,7 @@ export default function Home() {
                       aria-label={`${emoji.label}を挿入`}
                       onClick={() => insertEmoji(emoji)}
                     >
-                      <img src={`/emojis/${encodeURIComponent(emoji.file)}`} alt="" />
+                      <img src={emojiUrl(emoji.file)} alt="" />
                     </button>
                   ))}
                   {emojis.length === 0 && <span className="emoji-empty">登録待ち</span>}
@@ -277,7 +308,7 @@ export default function Home() {
               )}
             </form>
 
-            <div className="feed-heading">
+            <div id="posts" className="feed-heading">
               <h3>新着の投稿</h3>
               <span><span className="feed-dot" />新しい順</span>
             </div>
@@ -328,13 +359,13 @@ export default function Home() {
               <a href="#about" className="guide-link">掲示板について <span aria-hidden="true">→</span></a>
             </section>
 
-            <section className="emoji-card card">
+            <section id="emojis" className="emoji-card card">
               <div className="emoji-card-heading"><span>✿</span><h3>この掲示板の絵文字</h3></div>
               <p>投稿フォームからワンタップで使えます。</p>
               <div className="emoji-gallery">
                 {emojis.slice(0, 8).map((emoji) => (
                   <span className="emoji-gallery-item" key={emoji.code} title={emoji.label}>
-                    <img src={`/emojis/${encodeURIComponent(emoji.file)}`} alt={emoji.label} />
+                    <img src={emojiUrl(emoji.file)} alt={emoji.label} />
                   </span>
                 ))}
                 {emojis.length === 0 && <span className="emoji-empty">絵文字を準備中です</span>}
@@ -347,6 +378,7 @@ export default function Home() {
           <span>よりみち掲示板 <span className="footer-sparkle">✳</span></span>
           <span>今日も、よいよりみちを。</span>
         </footer>
+        </div>
       </main>
     </div>
   );

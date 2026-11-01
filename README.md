@@ -1,6 +1,6 @@
 # よりみち掲示板
 
-CloudflareでホストするReact Routerフロントエンドと、MongoDBに接続する独立したHono APIで構成されています。投稿の取得・作成はすべてHono APIを通します。投稿者はニックネームを入力する方式で、アカウント認証はありません。
+CloudflareでホストするReact Routerフロントエンドと、MongoDBに接続する独立したHono APIで構成されています。フロントエンドとAPIのパスプレフィックスは `/www-bbs/` です。投稿の取得・作成はすべてHono APIを通します。投稿者はニックネームを入力する方式で、アカウント認証はありません。
 
 ## ローカル開発
 
@@ -28,7 +28,7 @@ CloudflareでホストするReact Routerフロントエンドと、MongoDBに接
 
 ### フロントエンド（Cloudflare）
 
-ビルド時に `VITE_API_BASE_URL` をHono APIの公開URL（例: `https://api.motchiy.com/www-bbs`）に設定してから `npm run deploy` を実行します。Cloudflare側にはフロントエンドと `public\emojis\` の画像がデプロイされます。
+ビルド時に `VITE_API_BASE_URL` をHono APIの公開URL（例: `https://api.motchiy.com/www-bbs`）に設定してから `npm run deploy` を実行します。公開後の掲示板URLは、Cloudflareのホスト名に `/www-bbs/` を付けたURLです。Cloudflare側にはフロントエンドと `public\emojis\` の画像がデプロイされます。
 
 ### Hono API（自分のサーバー）
 
