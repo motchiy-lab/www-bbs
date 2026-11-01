@@ -164,9 +164,9 @@ export default function Home() {
     if (showLoading && !didLoadRef.current) setLoading(true);
     try {
       const [sessionResult, boardResult, emojiResult] = await Promise.all([
-        fetchJson<Session>("/api/session"),
-        fetchJson<Board>("/api/board"),
-        fetchJson<{ emojis: Emoji[] }>("/api/emojis"),
+        fetchJson<Session>("/session"),
+        fetchJson<Board>("/board"),
+        fetchJson<{ emojis: Emoji[] }>("/emojis"),
       ]);
       setSession(sessionResult);
       setBoard(boardResult);
@@ -198,7 +198,7 @@ export default function Home() {
     setError("");
     setSending(true);
     try {
-      await fetchJson("/api/posts", {
+      await fetchJson("/posts", {
         method: "POST",
         body: JSON.stringify({ body }),
       });
@@ -217,7 +217,7 @@ export default function Home() {
     setError("");
     setBusyLetter(letter.id);
     try {
-      await fetchJson(`/api/posts/${encodeURIComponent(letter.id)}/advance`, {
+      await fetchJson(`/posts/${encodeURIComponent(letter.id)}/advance`, {
         method: "POST",
         body: JSON.stringify({
           target,

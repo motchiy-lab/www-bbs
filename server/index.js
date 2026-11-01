@@ -95,7 +95,7 @@ class ApiError extends Error {
 }
 
 app.use(
-  "/api/*",
+  "/*",
   cors({
     origin: allowedOrigins,
     allowMethods: ["GET", "POST", "OPTIONS"],
@@ -332,15 +332,15 @@ async function sweepLetters() {
   }
 }
 
-app.get("/api/health", (context) => context.json({ status: "ok" }));
+app.get("/health", (context) => context.json({ status: "ok" }));
 
-app.get("/api/emojis", (context) =>
+app.get("/emojis", (context) =>
   context.json({
     emojis: emojiConfig.map(({ code, label, file }) => ({ code, label, file })),
   }),
 );
 
-app.get("/api/session", async (context) => {
+app.get("/session", async (context) => {
   const userId = getUserId(context);
   const user = await getOrCreateUser(userId, { touch: true });
   await dispatchWaitingLetters();
@@ -366,7 +366,7 @@ app.get("/api/session", async (context) => {
   });
 });
 
-app.get("/api/board", async (context) => {
+app.get("/board", async (context) => {
   const userId = getUserId(context);
   await getOrCreateUser(userId, { touch: true });
   await dispatchWaitingLetters();
@@ -408,7 +408,7 @@ app.get("/api/board", async (context) => {
   });
 });
 
-app.post("/api/posts", async (context) => {
+app.post("/posts", async (context) => {
   const userId = getUserId(context);
   let payload;
   try {
@@ -440,7 +440,7 @@ app.post("/api/posts", async (context) => {
   return context.json({ id: post._id }, 201);
 });
 
-app.post("/api/posts/:postId/advance", async (context) => {
+app.post("/posts/:postId/advance", async (context) => {
   const userId = getUserId(context);
   let payload;
   try {

@@ -66,4 +66,4 @@ Node.js 22以降を用意し、このリポジトリをサーバーへ配置し�
 
 APIサーバーは `0.0.0.0` で待ち受けます。APIはMongoDBのインデックスを自動作成しません。インターネット公開時はリバースプロキシでHTTPSを有効にし、Cloudflareの実際のサイトオリジンだけを `CORS_ORIGINS` に設定してください。MongoDBの接続情報はフロントエンドに設定せず、APIサーバー上だけに保管します。
 
-Hono APIのルートには `/www-bbs` が含まれます。リバースプロキシではこのプレフィックスを取り除かず、たとえばNginxでは `proxy_pass http://127.0.0.1:8787;` のように末尾に `/` を付けずに転送します。公開後の確認先は `https://api.motchiy.com/www-bbs/api/health` です。
+Hono APIのすべてのエンドポイントは `/www-bbs/` から始まります。リバースプロキシではこのプレフィックスを取り除かず、たとえばNginxでは `proxy_pass http://127.0.0.1:8787;` のように末尾に `/` を付けずに転送します。公開後の確認先は `https://api.motchiy.com/www-bbs/health` です。
