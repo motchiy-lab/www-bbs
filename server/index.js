@@ -3,12 +3,19 @@ import { cors } from "hono/cors";
 import { Hono } from "hono";
 import { MongoClient } from "mongodb";
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { replenishCredits } from "./credits.js";
+
+const envApiPath = fileURLToPath(new URL("../.env.api", import.meta.url));
+if (existsSync(envApiPath)) {
+  process.loadEnvFile(envApiPath);
+}
 
 const mongoUri = process.env.MONGODB_URI;
 const databaseName = process.env.MONGODB_DB;
 const port = Number(process.env.PORT ?? 8787);
+const hostname = process.env.HOST?.trim() || "127.0.0.1";
 const allowedOrigins = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
@@ -553,12 +560,12 @@ app.onError((error, context) => {
 const server = serve({
   fetch: app.fetch,
   port,
-  hostname: "0.0.0.0",
+  hostname,
 });
 const sweepTimer = setInterval(() => void sweepLetters(), 5000);
 sweepTimer.unref();
 
-console.log(`Hono API listening on http://0.0.0.0:${port}/www-bbs`);
+console.log(`Hono API listening on http://${hostname}:${port}/www-bbs`);
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {

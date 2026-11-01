@@ -5,8 +5,8 @@
   "scripts": {
     "build": "react-router build",
     "dev": "concurrently --kill-others --names api,web \"npm:dev:api\" \"react-router dev\"",
-    "dev:api": "node --env-file-if-exists=.env.api --watch server/index.js",
-    "start:api": "node --env-file-if-exists=.env.api server/index.js",
+    "dev:api": "node --watch server/index.js",
+    "start:api": "node server/index.js",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
     "deploy": "npm run build && wrangler deploy",
     "preview": "npm run build && vite preview",
