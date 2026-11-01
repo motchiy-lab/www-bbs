@@ -6,7 +6,7 @@ CloudflareでホストするReact Routerフロントエンドと、MongoDBに接
 
 1. `npm install` を実行します。
 2. `.env.api.example` を `.env.api` にコピーし、MongoDBの接続URIとデータベース名を設定します。MongoDBユーザーには対象DBの `readWrite` 権限が必要です。接続ユーザーの認証DBが利用DBと異なる場合は、URIに `authSource`（例: `?authSource=admin`）を指定します。
-3. `.env.example` を `.env` にコピーします。ローカルAPIのURLは `http://localhost:8787` です。
+3. `.env.example` を `.env` にコピーします。ローカルAPIのベースURLは `http://localhost:8787/www-bbs` です。
 4. `npm run dev:api` と `npm run dev` をそれぞれ起動します。
 
 ## 絵文字の追加
@@ -28,7 +28,7 @@ CloudflareでホストするReact Routerフロントエンドと、MongoDBに接
 
 ### フロントエンド（Cloudflare）
 
-ビルド時に `VITE_API_BASE_URL` をHono APIの公開HTTPS URLに設定してから `npm run deploy` を実行します。Cloudflare側にはフロントエンドと `public\emojis\` の画像がデプロイされます。
+ビルド時に `VITE_API_BASE_URL` をHono APIの公開URL（例: `https://api.motchiy.com/www-bbs`）に設定してから `npm run deploy` を実行します。Cloudflare側にはフロントエンドと `public\emojis\` の画像がデプロイされます。
 
 ### Hono API（自分のサーバー）
 
@@ -40,3 +40,5 @@ Node.js 22以降を用意し、このリポジトリをサーバーへ配置し�
 - `CORS_ORIGINS`: Cloudflareフロントエンドのオリジン。複数の場合はカンマ区切り
 
 APIサーバーは `0.0.0.0` で待ち受けます。APIはMongoDBのインデックスを自動作成しません。インターネット公開時はリバースプロキシでHTTPSを有効にし、Cloudflareの実際のサイトオリジンだけを `CORS_ORIGINS` に設定してください。MongoDBの接続情報はフロントエンドに設定せず、APIサーバー上だけに保管します。
+
+Hono APIのルートには `/www-bbs` が含まれます。リバースプロキシではこのプレフィックスを取り除かず、たとえばNginxでは `proxy_pass http://127.0.0.1:8787;` のように末尾に `/` を付けずに転送します。公開後の確認先は `https://api.motchiy.com/www-bbs/api/health` です。

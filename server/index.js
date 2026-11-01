@@ -56,7 +56,7 @@ await mongo.connect();
 
 const posts = mongo.db(databaseName).collection("posts");
 
-const app = new Hono();
+const app = new Hono().basePath("/www-bbs");
 
 app.use(
   "/api/*",
@@ -146,7 +146,7 @@ const server = serve({
   hostname: "0.0.0.0",
 });
 
-console.log(`Hono API listening on http://0.0.0.0:${port}`);
+console.log(`Hono API listening on http://0.0.0.0:${port}/www-bbs`);
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {

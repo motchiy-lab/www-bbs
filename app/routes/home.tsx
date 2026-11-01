@@ -15,6 +15,7 @@ type Post = {
 };
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
+const apiPrefix = apiBaseUrl.endsWith("/www-bbs") ? "" : "/www-bbs";
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   if (!apiBaseUrl) {
@@ -23,7 +24,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 
   let response: Response;
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
+    response = await fetch(`${apiBaseUrl}${apiPrefix}${path}`, {
       ...init,
       headers: {
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
