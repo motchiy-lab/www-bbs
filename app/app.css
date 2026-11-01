@@ -45,6 +45,12 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+.site-shell button,
+.site-shell [aria-hidden="true"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 a {
   color: var(--primary-color);
   text-decoration: none;
