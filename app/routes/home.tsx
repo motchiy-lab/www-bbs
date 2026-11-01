@@ -14,7 +14,9 @@ type Post = {
   createdAt: string;
 };
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
+const apiBaseUrl = (
+  import.meta.env.VITE_API_BASE_URL || "https://api.motchiy.com/www-bbs"
+).replace(/\/+$/, "");
 const apiPrefix = apiBaseUrl.endsWith("/www-bbs") ? "" : "/www-bbs";
 const appBaseUrl = import.meta.env.BASE_URL;
 
