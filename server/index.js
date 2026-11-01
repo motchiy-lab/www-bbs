@@ -69,7 +69,7 @@ if (
 
 let mongo;
 try {
-  mongo = new MongoClient(mongoUri);
+  mongo = new MongoClient(mongoUri, { retryWrites: false });
 } catch (error) {
   if (error instanceof Error && error.name === "MongoParseError") {
     throw new Error(
@@ -111,9 +111,8 @@ function getUserId(context) {
   return userId;
 }
 
-async function getOrCreateUser(userId, { session, touch = false } = {}) {
+async function getOrCreateUser(userId, { touch = false } = {}) {
   const now = new Date();
-  const options = session ? { session } : {};
   await users.updateOne(
     { _id: userId },
     {
@@ -124,11 +123,11 @@ async function getOrCreateUser(userId, { session, touch = false } = {}) {
       },
       ...(touch ? { $set: { lastSeenAt: now } } : {}),
     },
-    { ...options, upsert: true },
+    { upsert: true },
   );
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const user = await users.findOne({ _id: userId }, options);
+    const user = await users.findOne({ _id: userId });
     if (!user) {
       throw new Error("Failed to load the anonymous participant.");
     }
@@ -146,7 +145,6 @@ async function getOrCreateUser(userId, { session, touch = false } = {}) {
           creditUpdatedAt: replenished.creditUpdatedAt,
         },
       },
-      options,
     );
     if (result.matchedCount === 1) {
       return { ...user, ...replenished, ...(touch ? { lastSeenAt: now } : {}) };
@@ -155,8 +153,8 @@ async function getOrCreateUser(userId, { session, touch = false } = {}) {
   throw new ApiError("クレジットを更新できませんでした。再度お試しください。", 409);
 }
 
-async function chargeCredits(userId, amount, session) {
-  const user = await getOrCreateUser(userId, { session });
+async function chargeCredits(userId, amount) {
+  const user = await getOrCreateUser(userId);
   if (user.credits < amount) {
     throw new ApiError(`クレジットが足りません（必要: ${amount}）。`, 409);
   }
@@ -164,11 +162,25 @@ async function chargeCredits(userId, amount, session) {
   const result = await users.updateOne(
     { _id: userId, credits: { $gte: amount } },
     { $inc: { credits: -amount } },
-    { session },
   );
   if (result.modifiedCount !== 1) {
     throw new ApiError("クレジットを更新できませんでした。再度お試しください。", 409);
   }
+}
+
+async function refundCredits(userId, amount) {
+  await users.updateOne(
+    { _id: userId },
+    [
+      {
+        $set: {
+          credits: {
+            $min: [settings.maxCredits, { $add: ["$credits", amount] }],
+          },
+        },
+      },
+    ],
+  );
 }
 
 function validateMessage(value, required = false) {
@@ -193,9 +205,9 @@ function chooseRandom(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-async function chooseNextRecipient(post, session, now = new Date()) {
+async function chooseNextRecipient(post, now = new Date()) {
   const candidates = await users
-    .find({ _id: { $nin: post.receivedUserIds } }, { session })
+    .find({ _id: { $nin: post.receivedUserIds } })
     .toArray();
   if (candidates.length === 0) {
     return null;
@@ -211,11 +223,15 @@ async function chooseNextRecipient(post, session, now = new Date()) {
   return chooseRandom(online.length > 0 ? online : candidates);
 }
 
-async function deliverOrWait(post, session, now = new Date()) {
-  const nextRecipient = await chooseNextRecipient(post, session, now);
+async function deliverOrWait(post, now = new Date()) {
+  const nextRecipient = await chooseNextRecipient(post, now);
   if (!nextRecipient) {
     await posts.updateOne(
-      { _id: post._id, status: "active", currentRecipientId: post.currentRecipientId },
+      {
+        _id: post._id,
+        status: "active",
+        currentRecipientId: post.currentRecipientId,
+      },
       {
         $set: {
           status: "waiting",
@@ -223,7 +239,6 @@ async function deliverOrWait(post, session, now = new Date()) {
           expiresAt: null,
         },
       },
-      { session },
     );
     return;
   }
@@ -239,7 +254,6 @@ async function deliverOrWait(post, session, now = new Date()) {
       },
       $addToSet: { receivedUserIds: nextRecipient._id },
     },
-    { session },
   );
 }
 
@@ -248,60 +262,44 @@ async function dispatchWaitingLetters() {
     .find({ version: 2, status: "waiting" })
     .toArray();
   for (const post of waiting) {
-    const session = mongo.startSession();
-    try {
-      await session.withTransaction(async () => {
-        const current = await posts.findOne(
-          { _id: post._id, version: 2, status: "waiting" },
-          { session },
-        );
-        if (!current) return;
+    const current = await posts.findOne({
+      _id: post._id,
+      version: 2,
+      status: "waiting",
+    });
+    if (!current) continue;
 
-        const nextRecipient = await chooseNextRecipient(current, session);
-        if (!nextRecipient) return;
+    const nextRecipient = await chooseNextRecipient(current);
+    if (!nextRecipient) continue;
 
-        const now = new Date();
-        await posts.updateOne(
-          { _id: current._id, version: 2, status: "waiting" },
-          {
-            $set: {
-              status: "active",
-              currentRecipientId: nextRecipient._id,
-              expiresAt: new Date(
-                now.getTime() + settings.recipientTimeoutSeconds * 1000,
-              ),
-            },
-            $addToSet: { receivedUserIds: nextRecipient._id },
-          },
-          { session },
-        );
-      });
-    } finally {
-      await session.endSession();
-    }
+    const now = new Date();
+    await posts.updateOne(
+      { _id: current._id, version: 2, status: "waiting" },
+      {
+        $set: {
+          status: "active",
+          currentRecipientId: nextRecipient._id,
+          expiresAt: new Date(
+            now.getTime() + settings.recipientTimeoutSeconds * 1000,
+          ),
+        },
+        $addToSet: { receivedUserIds: nextRecipient._id },
+      },
+    );
   }
 }
 
 async function expireLetter(postId, recipientId, expiresAt) {
-  const session = mongo.startSession();
-  try {
-    await session.withTransaction(async () => {
-      const now = new Date();
-      const post = await posts.findOne(
-        {
-          _id: postId,
-          version: 2,
-          status: "active",
-          currentRecipientId: recipientId,
-          expiresAt: { $eq: expiresAt, $lte: now },
-        },
-        { session },
-      );
-      if (!post) return;
-      await deliverOrWait(post, session, now);
-    });
-  } finally {
-    await session.endSession();
+  const now = new Date();
+  const post = await posts.findOne({
+    _id: postId,
+    version: 2,
+    status: "active",
+    currentRecipientId: recipientId,
+    expiresAt: { $eq: expiresAt, $lte: now },
+  });
+  if (post) {
+    await deliverOrWait(post, now);
   }
 }
 
@@ -431,16 +429,9 @@ app.post("/api/posts", async (context) => {
     ),
   };
 
-  const session = mongo.startSession();
-  try {
-    await session.withTransaction(async () => {
-      await getOrCreateUser(userId, { session, touch: true });
-      await chargeCredits(userId, settings.createLetterCost, session);
-      await posts.insertOne(post, { session });
-    });
-  } finally {
-    await session.endSession();
-  }
+  await getOrCreateUser(userId, { touch: true });
+  await chargeCredits(userId, settings.createLetterCost);
+  await posts.insertOne(post);
 
   return context.json({ id: post._id }, 201);
 });
@@ -459,82 +450,90 @@ app.post("/api/posts/:postId/advance", async (context) => {
   }
   const text = validateMessage(payload?.text);
   const postId = context.req.param("postId");
-  const session = mongo.startSession();
-  let result;
-  try {
-    await session.withTransaction(async () => {
-      const post = await posts.findOne(
-        {
-          _id: postId,
-          version: 2,
-          status: "active",
-          currentRecipientId: userId,
-        },
-        { session },
-      );
-      if (!post) {
-        throw new ApiError("この便箋は手元にないか、すでに流されています。", 404);
-      }
-
-      const now = new Date();
-      if (post.expiresAt && post.expiresAt <= now) {
-        await deliverOrWait(post, session, now);
-        result = { timedOut: true };
-        return;
-      }
-
-      if (text && post.notes.some((note) => note.userId === userId)) {
-        throw new ApiError("この便箋にはすでに書き込み済みです。");
-      }
-
-      const cost =
-        (target === "creator" ? settings.returnLetterCost : 0) +
-        (text ? settings.writeCost : 0);
-      if (cost > 0) {
-        await chargeCredits(userId, cost, session);
-      }
-
-      const update = {
-        $set:
-          target === "creator"
-            ? {
-                status: "completed",
-                currentRecipientId: post.creatorId,
-                expiresAt: null,
-                returnedAt: now,
-              }
-            : {
-                currentRecipientId: userId,
-              },
-      };
-      if (text) {
-        update.$push = {
-          notes: { userId, text, createdAt: now },
-        };
-      }
-
-      await posts.updateOne({ _id: post._id }, update, { session });
-      if (target === "next") {
-        const updatedPost = {
-          ...post,
-          currentRecipientId: userId,
-          notes: text
-            ? [...post.notes, { userId, text, createdAt: now }]
-            : post.notes,
-        };
-        await deliverOrWait(updatedPost, session, now);
-      }
-      result = { timedOut: false };
-    });
-  } finally {
-    await session.endSession();
+  const now = new Date();
+  const post = await posts.findOne({
+    _id: postId,
+    version: 2,
+    status: "active",
+    currentRecipientId: userId,
+  });
+  if (!post) {
+    throw new ApiError("この便箋は手元にないか、すでに流されています。", 404);
   }
 
-  if (result?.timedOut) {
+  if (post.expiresAt && post.expiresAt <= now) {
+    await expireLetter(post._id, userId, post.expiresAt);
     return context.json(
       { error: "時間切れのため、便箋は自動で次へ流れました。" },
       409,
     );
+  }
+
+  if (text && post.notes.some((note) => note.userId === userId)) {
+    throw new ApiError("この便箋にはすでに書き込み済みです。");
+  }
+
+  const cost =
+    (target === "creator" ? settings.returnLetterCost : 0) +
+    (text ? settings.writeCost : 0);
+  if (cost > 0) {
+    await chargeCredits(userId, cost);
+  }
+
+  const change = {
+    $set:
+      target === "creator"
+        ? {
+            status: "completed",
+            currentRecipientId: post.creatorId,
+            expiresAt: null,
+            returnedAt: now,
+          }
+        : {
+            status: "waiting",
+            currentRecipientId: null,
+            expiresAt: null,
+          },
+  };
+  if (text) {
+    change.$push = {
+      notes: { userId, text, createdAt: now },
+    };
+  }
+
+  const updateResult = await posts.updateOne(
+    {
+      _id: post._id,
+      version: 2,
+      status: "active",
+      currentRecipientId: userId,
+      expiresAt: { $gt: now },
+    },
+    change,
+  );
+
+  if (updateResult.modifiedCount !== 1) {
+    if (cost > 0) {
+      await refundCredits(userId, cost);
+    }
+    const current = await posts.findOne({ _id: post._id });
+    if (
+      current?.status === "active" &&
+      current.currentRecipientId === userId &&
+      current.expiresAt instanceof Date &&
+      current.expiresAt <= new Date()
+    ) {
+      await expireLetter(current._id, userId, current.expiresAt);
+      return context.json(
+        { error: "時間切れのため、便箋は自動で次へ流れました。" },
+        409,
+      );
+    }
+    throw new ApiError("便箋の状態が変わりました。再読み込みしてください。", 409);
+  }
+
+  if (target === "next") {
+    await dispatchWaitingLetters();
   }
   return context.json({ ok: true });
 });

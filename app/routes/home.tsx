@@ -155,7 +155,6 @@ export default function Home() {
   const [sending, setSending] = useState(false);
   const [busyLetter, setBusyLetter] = useState("");
   const [error, setError] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
   const didLoadRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -280,31 +279,7 @@ export default function Home() {
         <a className="topbar-link" href="#about">遊びかた <span aria-hidden="true">↗</span></a>
       </header>
 
-      <nav className="side-menu" aria-label="ページ内メニュー">
-        <a href="#composer">便箋をつくる</a>
-        <a href="#inbox">手元の便箋</a>
-        <a href="#sent">送った便箋</a>
-        <a href="#about">遊びかた</a>
-      </nav>
-      <button
-        className="menu-toggle"
-        type="button"
-        aria-label={menuOpen ? "メニューを閉じる" : "メニューを開く"}
-        aria-expanded={menuOpen}
-        aria-controls="mobile-menu"
-        onClick={() => setMenuOpen((open) => !open)}
-      >
-        <span aria-hidden="true">{menuOpen ? "×" : "☰"}</span>
-      </button>
       <main className="main-layout">
-        {menuOpen && (
-          <nav id="mobile-menu" className="mobile-menu" aria-label="ページ内メニュー">
-            <a href="#composer" onClick={() => setMenuOpen(false)}>便箋をつくる</a>
-            <a href="#inbox" onClick={() => setMenuOpen(false)}>手元の便箋</a>
-            <a href="#sent" onClick={() => setMenuOpen(false)}>送った便箋</a>
-            <a href="#about" onClick={() => setMenuOpen(false)}>遊びかた</a>
-          </nav>
-        )}
         <div className="container page-layout">
           <section className="intro" aria-labelledby="page-title">
             <div className="intro-copy">
