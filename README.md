@@ -1,6 +1,6 @@
 # よりみち掲示板
 
-CloudflareでホストするReact Routerフロントエンドと、MongoDBに接続する独立したHono APIで構成されています。フロントエンドとAPIのパスプレフィックスは `/www-bbs/` です。投稿の取得・作成はすべてHono APIを通します。投稿者はニックネームを入力する方式で、アカウント認証はありません。
+CloudflareでホストするReact Routerフロントエンドと、MongoDBに接続する独立したHono APIで構成されています。フロントエンドは `/`、Hono APIのルートは `/www-bbs/` で配信します。投稿の取得・作成はすべてHono APIを通します。投稿者はニックネームを入力する方式で、アカウント認証はありません。
 
 ## ローカル開発
 
@@ -28,7 +28,9 @@ CloudflareでホストするReact Routerフロントエンドと、MongoDBに接
 
 ### フロントエンド（Cloudflare）
 
-ビルド時に `VITE_API_BASE_URL` をHono APIの公開URL（例: `https://api.motchiy.com/www-bbs`）に設定してから `npm run deploy` を実行します。公開後の掲示板URLは、Cloudflareのホスト名に `/www-bbs/` を付けたURLです。Cloudflare側にはフロントエンドと `public\emojis\` の画像がデプロイされます。
+公開後の掲示板URLはCloudflareのホストURL直下（例: `https://www-bbs.motchiy-tuti.workers.dev/`）です。本番ビルドは `.env.production` に記載した `https://api.motchiy.com/www-bbs` をAPI URLとして使用します。APIのホスト名を変更する場合は `.env.production` を更新するか、Cloudflare Workers Buildsの **Settings > Build > Build variables and secrets** に `VITE_API_BASE_URL` をBuild variableとして設定して再ビルドしてください。このURLはビルド時にブラウザーへ含まれる公開設定です。MongoDBの接続情報は登録しないでください。ローカルの `.env` は引き続き `http://localhost:8787/www-bbs` を指定します。Cloudflare側にはフロントエンドと `public\emojis\` の画像がデプロイされます。
+
+Cloudflare Workersの静的アセットと絵文字画像は `/assets/` と `/emojis/` で配信します。Viteの `base: "/"` はこのアセットパスのための設定です。
 
 ### Hono API（自分のサーバー）
 
@@ -37,7 +39,7 @@ Node.js 22以降を用意し、このリポジトリをサーバーへ配置し�
 - `MONGODB_URI`: MongoDB接続URI。ユーザー名・パスワードに `$ : / ? # [ ] @ %` などURIの予約文字が含まれる場合は、URLエンコードしてから設定します（例: `@` は `%40`、`:` は `%3A`、`/` は `%2F`、`%` は `%25`）。
 - `MONGODB_DB`: 使用するデータベース名
 - `PORT`: APIが待ち受けるポート（省略時 `8787`）
-- `CORS_ORIGINS`: Cloudflareフロントエンドのオリジン。複数の場合はカンマ区切り
+- `CORS_ORIGINS`: Cloudflareフロントエンドのオリジン。たとえば `https://www-bbs.motchiy-tuti.workers.dev`。`/www-bbs` などのパスは付けず、複数の場合はカンマ区切り
 
 APIサーバーは `0.0.0.0` で待ち受けます。APIはMongoDBのインデックスを自動作成しません。インターネット公開時はリバースプロキシでHTTPSを有効にし、Cloudflareの実際のサイトオリジンだけを `CORS_ORIGINS` に設定してください。MongoDBの接続情報はフロントエンドに設定せず、APIサーバー上だけに保管します。
 
