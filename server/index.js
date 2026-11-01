@@ -206,8 +206,12 @@ function chooseRandom(items) {
 }
 
 async function chooseNextRecipient(post, now = new Date()) {
+  const alreadyReceived = new Set([
+    ...(Array.isArray(post.receivedUserIds) ? post.receivedUserIds : []),
+    post.creatorId,
+  ]);
   const candidates = await users
-    .find({ _id: { $nin: post.receivedUserIds } })
+    .find({ _id: { $nin: [...alreadyReceived] } })
     .toArray();
   if (candidates.length === 0) {
     return null;
