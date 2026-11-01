@@ -438,6 +438,60 @@ textarea:focus-visible {
   padding: 16px 15px 13px;
 }
 
+.credit-panel {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: auto minmax(80px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  background: #faf9fd;
+}
+
+.credit-label,
+.credit-balance {
+  display: block;
+}
+
+.credit-label {
+  color: #777582;
+  font-size: 9px;
+}
+
+.credit-balance {
+  margin-top: 3px;
+  color: var(--primary-color);
+  font-size: 17px;
+  line-height: 1;
+}
+
+.credit-balance span {
+  color: #8c8998;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.credit-meter {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #e9e7f0;
+}
+
+.credit-meter span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7774aa, #aaa6cf);
+  transition: width 250ms ease;
+}
+
+.credit-hint {
+  color: #777582;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
 .composer-heading {
   margin-bottom: 12px;
   display: flex;
@@ -798,6 +852,192 @@ textarea:focus-visible {
   font-size: 12px;
 }
 
+.letter-card {
+  padding: 15px;
+}
+
+.letter-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.letter-stamp,
+.sent-mark {
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px 9px 9px 3px;
+  background: #f1f0f7;
+  color: var(--primary-color);
+  font-size: 15px;
+}
+
+.letter-card-heading strong,
+.letter-card-heading time {
+  display: block;
+}
+
+.letter-card-heading strong {
+  color: #444252;
+  font-size: 11px;
+}
+
+.letter-card-heading time {
+  margin-top: 4px;
+  color: #777582;
+  font-size: 9px;
+}
+
+.letter-timer {
+  margin-left: auto;
+  color: #837b63;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.letter-body {
+  margin: 15px 0 13px;
+  padding: 12px;
+  border-left: 2px solid #c9c6dd;
+  background: #faf9fc;
+  color: #494852;
+  font-size: 11px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.letter-notes {
+  margin: 12px 0;
+}
+
+.letter-notes h4 {
+  margin: 0 0 8px;
+  color: var(--primary-color);
+  font-size: 10px;
+}
+
+.letter-note {
+  margin-top: 7px;
+  padding: 9px 10px;
+  border: 1px solid #eeedf2;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.letter-note p {
+  margin: 0;
+  color: #494852;
+  font-size: 10px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.letter-note time {
+  margin-top: 5px;
+  display: block;
+  color: #85838e;
+  font-size: 8px;
+  text-align: right;
+}
+
+.letter-controls {
+  padding-top: 11px;
+  border-top: 1px solid #eeedf2;
+}
+
+.letter-reply {
+  width: 100%;
+  min-height: 65px;
+  padding: 9px 10px;
+  border: 1px solid #d9d8e1;
+  border-radius: 5px;
+  background: #fcfcfd;
+  color: var(--text-color);
+  font-size: 10px;
+  line-height: 1.8;
+  resize: vertical;
+}
+
+.letter-reply::placeholder {
+  color: #9c9aa5;
+}
+
+.reply-emoji-tools {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.letter-actions {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.letter-cost-note {
+  margin-right: auto;
+  color: #777582;
+  font-size: 8px;
+}
+
+.secondary-button {
+  border-color: #d9d7e8;
+  background: #f4f3f9;
+  color: var(--primary-color);
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: var(--white);
+  color: var(--primary-color);
+}
+
+.sent-list {
+  display: grid;
+  gap: 7px;
+}
+
+.sent-item {
+  min-height: 48px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.sent-mark {
+  width: 27px;
+  height: 27px;
+  flex-basis: 27px;
+  font-size: 12px;
+}
+
+.sent-count,
+.sent-status {
+  color: #5f5e68;
+  font-size: 9px;
+}
+
+.sent-status {
+  margin-left: auto;
+  color: #77749f;
+}
+
+.sent-empty {
+  padding: 17px;
+  color: #777582;
+  font-size: 10px;
+  text-align: center;
+}
+
 .sidebar {
   padding-top: 0;
   display: grid;
@@ -1149,6 +1389,15 @@ textarea:focus-visible {
     align-items: flex-end;
   }
 
+  .credit-panel {
+    grid-template-columns: auto 1fr;
+  }
+
+  .credit-hint {
+    grid-column: 1 / -1;
+    text-align: right;
+  }
+
   .emoji-tools {
     gap: 1px;
   }
@@ -1178,6 +1427,22 @@ textarea:focus-visible {
   .post-card {
     padding: 13px 10px;
     gap: 8px;
+  }
+
+  .letter-card {
+    padding: 12px 10px;
+  }
+
+  .letter-actions {
+    justify-content: stretch;
+  }
+
+  .letter-cost-note {
+    width: 100%;
+  }
+
+  .letter-actions .submit-button {
+    flex: 1;
   }
 
   .avatar {

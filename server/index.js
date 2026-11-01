@@ -1,8 +1,10 @@
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { Hono } from "hono";
-import { MongoClient, ObjectId } from "mongodb";
+import { MongoClient } from "mongodb";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { replenishCredits } from "./credits.js";
 
 const mongoUri = process.env.MONGODB_URI;
 const databaseName = process.env.MONGODB_DB;
@@ -18,6 +20,32 @@ if (!mongoUri || !databaseName) {
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("PORT must be a valid TCP port.");
+}
+
+const settings = JSON.parse(
+  readFileSync(new URL("./settings.json", import.meta.url), "utf8"),
+);
+const positiveSettings = [
+  "maxCredits",
+  "initialCredits",
+  "creditsPerRegen",
+  "regenIntervalSeconds",
+  "createLetterCost",
+  "returnLetterCost",
+  "writeCost",
+  "recipientTimeoutSeconds",
+  "onlineWindowSeconds",
+];
+if (
+  positiveSettings.some(
+    (key) => !Number.isInteger(settings[key]) || settings[key] < 1,
+  ) ||
+  settings.initialCredits > settings.maxCredits ||
+  settings.creditsPerRegen > settings.maxCredits ||
+  settings.createLetterCost > settings.maxCredits ||
+  settings.returnLetterCost + settings.writeCost > settings.maxCredits
+) {
+  throw new Error("server/settings.json contains invalid credit or timing settings.");
 }
 
 const emojiConfig = JSON.parse(
@@ -54,18 +82,253 @@ try {
 
 await mongo.connect();
 
-const posts = mongo.db(databaseName).collection("posts");
-
+const database = mongo.db(databaseName);
+const posts = database.collection("posts");
+const users = database.collection("anonymousUsers");
 const app = new Hono().basePath("/www-bbs");
+
+class ApiError extends Error {
+  constructor(message, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
 
 app.use(
   "/api/*",
   cors({
     origin: allowedOrigins,
     allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type"],
+    allowHeaders: ["Content-Type", "X-Anonymous-Id"],
   }),
 );
+
+function getUserId(context) {
+  const userId = context.req.header("X-Anonymous-Id") ?? "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+    throw new ApiError("匿名IDがありません。ページを再読み込みしてください。", 400);
+  }
+  return userId;
+}
+
+async function getOrCreateUser(userId, { session, touch = false } = {}) {
+  const now = new Date();
+  const options = session ? { session } : {};
+  await users.updateOne(
+    { _id: userId },
+    {
+      $setOnInsert: {
+        credits: settings.initialCredits,
+        creditUpdatedAt: now,
+        createdAt: now,
+      },
+      ...(touch ? { $set: { lastSeenAt: now } } : {}),
+    },
+    { ...options, upsert: true },
+  );
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const user = await users.findOne({ _id: userId }, options);
+    if (!user) {
+      throw new Error("Failed to load the anonymous participant.");
+    }
+
+    const replenished = replenishCredits(user, now.getTime(), settings);
+    const result = await users.updateOne(
+      {
+        _id: userId,
+        credits: user.credits,
+        creditUpdatedAt: user.creditUpdatedAt,
+      },
+      {
+        $set: {
+          credits: replenished.credits,
+          creditUpdatedAt: replenished.creditUpdatedAt,
+        },
+      },
+      options,
+    );
+    if (result.matchedCount === 1) {
+      return { ...user, ...replenished, ...(touch ? { lastSeenAt: now } : {}) };
+    }
+  }
+  throw new ApiError("クレジットを更新できませんでした。再度お試しください。", 409);
+}
+
+async function chargeCredits(userId, amount, session) {
+  const user = await getOrCreateUser(userId, { session });
+  if (user.credits < amount) {
+    throw new ApiError(`クレジットが足りません（必要: ${amount}）。`, 409);
+  }
+
+  const result = await users.updateOne(
+    { _id: userId, credits: { $gte: amount } },
+    { $inc: { credits: -amount } },
+    { session },
+  );
+  if (result.modifiedCount !== 1) {
+    throw new ApiError("クレジットを更新できませんでした。再度お試しください。", 409);
+  }
+}
+
+function validateMessage(value, required = false) {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (required && !text) {
+    throw new ApiError("便箋の内容を入力してください。");
+  }
+  if (text.length > 1000) {
+    throw new ApiError("書き込みは1000文字以内で入力してください。");
+  }
+
+  const registeredCodes = new Set(emojiConfig.map((emoji) => emoji.code));
+  for (const [, code] of text.matchAll(/:([a-z0-9_-]+):/gi)) {
+    if (!registeredCodes.has(code.toLowerCase())) {
+      throw new ApiError(`未登録の絵文字です: :${code}:`);
+    }
+  }
+  return text;
+}
+
+function chooseRandom(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+async function chooseNextRecipient(post, session, now = new Date()) {
+  const candidates = await users
+    .find({ _id: { $nin: post.receivedUserIds } }, { session })
+    .toArray();
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const onlineAfter = new Date(
+    now.getTime() - settings.onlineWindowSeconds * 1000,
+  );
+  const online = candidates.filter(
+    (candidate) =>
+      candidate.lastSeenAt instanceof Date && candidate.lastSeenAt >= onlineAfter,
+  );
+  return chooseRandom(online.length > 0 ? online : candidates);
+}
+
+async function deliverOrWait(post, session, now = new Date()) {
+  const nextRecipient = await chooseNextRecipient(post, session, now);
+  if (!nextRecipient) {
+    await posts.updateOne(
+      { _id: post._id, status: "active", currentRecipientId: post.currentRecipientId },
+      {
+        $set: {
+          status: "waiting",
+          currentRecipientId: null,
+          expiresAt: null,
+        },
+      },
+      { session },
+    );
+    return;
+  }
+
+  await posts.updateOne(
+    { _id: post._id, status: "active", currentRecipientId: post.currentRecipientId },
+    {
+      $set: {
+        currentRecipientId: nextRecipient._id,
+        expiresAt: new Date(
+          now.getTime() + settings.recipientTimeoutSeconds * 1000,
+        ),
+      },
+      $addToSet: { receivedUserIds: nextRecipient._id },
+    },
+    { session },
+  );
+}
+
+async function dispatchWaitingLetters() {
+  const waiting = await posts
+    .find({ version: 2, status: "waiting" })
+    .toArray();
+  for (const post of waiting) {
+    const session = mongo.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const current = await posts.findOne(
+          { _id: post._id, version: 2, status: "waiting" },
+          { session },
+        );
+        if (!current) return;
+
+        const nextRecipient = await chooseNextRecipient(current, session);
+        if (!nextRecipient) return;
+
+        const now = new Date();
+        await posts.updateOne(
+          { _id: current._id, version: 2, status: "waiting" },
+          {
+            $set: {
+              status: "active",
+              currentRecipientId: nextRecipient._id,
+              expiresAt: new Date(
+                now.getTime() + settings.recipientTimeoutSeconds * 1000,
+              ),
+            },
+            $addToSet: { receivedUserIds: nextRecipient._id },
+          },
+          { session },
+        );
+      });
+    } finally {
+      await session.endSession();
+    }
+  }
+}
+
+async function expireLetter(postId, recipientId, expiresAt) {
+  const session = mongo.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const now = new Date();
+      const post = await posts.findOne(
+        {
+          _id: postId,
+          version: 2,
+          status: "active",
+          currentRecipientId: recipientId,
+          expiresAt: { $eq: expiresAt, $lte: now },
+        },
+        { session },
+      );
+      if (!post) return;
+      await deliverOrWait(post, session, now);
+    });
+  } finally {
+    await session.endSession();
+  }
+}
+
+let sweepRunning = false;
+async function sweepLetters() {
+  if (sweepRunning) return;
+  sweepRunning = true;
+  try {
+    const now = new Date();
+    const expired = await posts
+      .find({
+        version: 2,
+        status: "active",
+        expiresAt: { $lte: now },
+      })
+      .project({ _id: 1, currentRecipientId: 1, expiresAt: 1 })
+      .toArray();
+    for (const post of expired) {
+      await expireLetter(post._id, post.currentRecipientId, post.expiresAt);
+    }
+    await dispatchWaitingLetters();
+  } catch (error) {
+    console.error("Failed to advance expired letters.", error);
+  } finally {
+    sweepRunning = false;
+  }
+}
 
 app.get("/api/health", (context) => context.json({ status: "ok" }));
 
@@ -75,67 +338,211 @@ app.get("/api/emojis", (context) =>
   }),
 );
 
-app.get("/api/posts", async (context) => {
-  const documents = await posts.find().sort({ createdAt: -1 }).limit(100).toArray();
+app.get("/api/session", async (context) => {
+  const userId = getUserId(context);
+  const user = await getOrCreateUser(userId, { touch: true });
+  await dispatchWaitingLetters();
+  const now = Date.now();
+  const nextCreditAt =
+    user.credits >= settings.maxCredits
+      ? null
+      : new Date(
+          new Date(user.creditUpdatedAt).getTime() +
+            settings.regenIntervalSeconds * 1000,
+        ).toISOString();
   return context.json({
-    posts: documents.map(({ _id, authorName, body, createdAt }) => ({
-      id: _id.toString(),
-      authorName,
-      body,
-      createdAt: createdAt.toISOString(),
+    credits: user.credits,
+    maxCredits: settings.maxCredits,
+    nextCreditAt,
+    now: new Date(now).toISOString(),
+    settings: {
+      createLetterCost: settings.createLetterCost,
+      returnLetterCost: settings.returnLetterCost,
+      writeCost: settings.writeCost,
+      recipientTimeoutSeconds: settings.recipientTimeoutSeconds,
+    },
+  });
+});
+
+app.get("/api/board", async (context) => {
+  const userId = getUserId(context);
+  await getOrCreateUser(userId, { touch: true });
+  await dispatchWaitingLetters();
+
+  const [heldLetters, createdLetters] = await Promise.all([
+    posts
+      .find({ version: 2, currentRecipientId: userId })
+      .sort({ createdAt: -1 })
+      .toArray(),
+    posts
+      .find({
+        version: 2,
+        creatorId: userId,
+        currentRecipientId: { $ne: userId },
+      })
+      .sort({ createdAt: -1 })
+      .toArray(),
+  ]);
+
+  return context.json({
+    letters: heldLetters.map((post) => ({
+      id: post._id,
+      body: post.body,
+      notes: post.notes.map(({ text, createdAt }) => ({
+        text,
+        createdAt: createdAt.toISOString(),
+      })),
+      createdAt: post.createdAt.toISOString(),
+      expiresAt: post.expiresAt?.toISOString() ?? null,
+      returned: post.status === "completed",
+      isCreator: post.creatorId === userId,
+    })),
+    sent: createdLetters.map((post) => ({
+      id: post._id,
+      replyCount: post.notes.length,
+      status: post.status,
+      createdAt: post.createdAt.toISOString(),
     })),
   });
 });
 
 app.post("/api/posts", async (context) => {
+  const userId = getUserId(context);
   let payload;
   try {
     payload = await context.req.json();
   } catch {
-    return context.json({ error: "JSON形式の投稿を送信してください。" }, 400);
+    return context.json({ error: "JSON形式の便箋を送信してください。" }, 400);
   }
-
-  const authorName =
-    typeof payload?.authorName === "string" ? payload.authorName.trim() : "";
-  const body = typeof payload?.body === "string" ? payload.body.trim() : "";
-
-  if (!authorName || authorName.length > 30) {
-    return context.json({ error: "お名前は1〜30文字で入力してください。" }, 400);
-  }
-
-  if (!body || body.length > 1000) {
-    return context.json({ error: "投稿内容は1〜1000文字で入力してください。" }, 400);
-  }
-
-  const registeredCodes = new Set(emojiConfig.map((emoji) => emoji.code));
-  for (const [, code] of body.matchAll(/:([a-z0-9_-]+):/gi)) {
-    if (!registeredCodes.has(code.toLowerCase())) {
-      return context.json({ error: `未登録の絵文字です: :${code}:` }, 400);
-    }
-  }
-
-  const document = {
-    _id: new ObjectId(),
-    authorName,
+  const body = validateMessage(payload?.body, true);
+  const now = new Date();
+  const post = {
+    _id: randomUUID(),
+    version: 2,
+    creatorId: userId,
     body,
-    createdAt: new Date(),
+    notes: [],
+    receivedUserIds: [userId],
+    currentRecipientId: userId,
+    status: "active",
+    createdAt: now,
+    expiresAt: new Date(
+      now.getTime() + settings.recipientTimeoutSeconds * 1000,
+    ),
   };
-  await posts.insertOne(document);
 
-  return context.json(
-    {
-      post: {
-        id: document._id.toString(),
-        authorName: document.authorName,
-        body: document.body,
-        createdAt: document.createdAt.toISOString(),
-      },
-    },
-    201,
-  );
+  const session = mongo.startSession();
+  try {
+    await session.withTransaction(async () => {
+      await getOrCreateUser(userId, { session, touch: true });
+      await chargeCredits(userId, settings.createLetterCost, session);
+      await posts.insertOne(post, { session });
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  return context.json({ id: post._id }, 201);
+});
+
+app.post("/api/posts/:postId/advance", async (context) => {
+  const userId = getUserId(context);
+  let payload;
+  try {
+    payload = await context.req.json();
+  } catch {
+    return context.json({ error: "JSON形式の操作を送信してください。" }, 400);
+  }
+  const target = payload?.target;
+  if (target !== "next" && target !== "creator") {
+    return context.json({ error: "便箋の行き先が正しくありません。" }, 400);
+  }
+  const text = validateMessage(payload?.text);
+  const postId = context.req.param("postId");
+  const session = mongo.startSession();
+  let result;
+  try {
+    await session.withTransaction(async () => {
+      const post = await posts.findOne(
+        {
+          _id: postId,
+          version: 2,
+          status: "active",
+          currentRecipientId: userId,
+        },
+        { session },
+      );
+      if (!post) {
+        throw new ApiError("この便箋は手元にないか、すでに流されています。", 404);
+      }
+
+      const now = new Date();
+      if (post.expiresAt && post.expiresAt <= now) {
+        await deliverOrWait(post, session, now);
+        result = { timedOut: true };
+        return;
+      }
+
+      if (text && post.notes.some((note) => note.userId === userId)) {
+        throw new ApiError("この便箋にはすでに書き込み済みです。");
+      }
+
+      const cost =
+        (target === "creator" ? settings.returnLetterCost : 0) +
+        (text ? settings.writeCost : 0);
+      if (cost > 0) {
+        await chargeCredits(userId, cost, session);
+      }
+
+      const update = {
+        $set:
+          target === "creator"
+            ? {
+                status: "completed",
+                currentRecipientId: post.creatorId,
+                expiresAt: null,
+                returnedAt: now,
+              }
+            : {
+                currentRecipientId: userId,
+              },
+      };
+      if (text) {
+        update.$push = {
+          notes: { userId, text, createdAt: now },
+        };
+      }
+
+      await posts.updateOne({ _id: post._id }, update, { session });
+      if (target === "next") {
+        const updatedPost = {
+          ...post,
+          currentRecipientId: userId,
+          notes: text
+            ? [...post.notes, { userId, text, createdAt: now }]
+            : post.notes,
+        };
+        await deliverOrWait(updatedPost, session, now);
+      }
+      result = { timedOut: false };
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  if (result?.timedOut) {
+    return context.json(
+      { error: "時間切れのため、便箋は自動で次へ流れました。" },
+      409,
+    );
+  }
+  return context.json({ ok: true });
 });
 
 app.onError((error, context) => {
+  if (error instanceof ApiError) {
+    return context.json({ error: error.message }, error.status);
+  }
   console.error(error);
   return context.json({ error: "サーバーでエラーが発生しました。" }, 500);
 });
@@ -145,11 +552,14 @@ const server = serve({
   port,
   hostname: "0.0.0.0",
 });
+const sweepTimer = setInterval(() => void sweepLetters(), 5000);
+sweepTimer.unref();
 
 console.log(`Hono API listening on http://0.0.0.0:${port}/www-bbs`);
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
+    clearInterval(sweepTimer);
     server.close();
     void mongo.close().finally(() => process.exit(0));
   });

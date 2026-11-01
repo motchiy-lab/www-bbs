@@ -1,0 +1,11 @@
+{
+  "maxCredits": 100,
+  "initialCredits": 50,
+  "creditsPerRegen": 1,
+  "regenIntervalSeconds": 300,
+  "createLetterCost": 30,
+  "returnLetterCost": 10,
+  "writeCost": 5,
+  "recipientTimeoutSeconds": 300,
+  "onlineWindowSeconds": 90
+}

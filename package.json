@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "react-router build",
-    "dev": "react-router dev",
+    "dev": "concurrently --kill-others --names api,web \"npm:dev:api\" \"react-router dev\"",
     "dev:api": "node --env-file-if-exists=.env.api --watch server/index.js",
     "start:api": "node --env-file-if-exists=.env.api server/index.js",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
@@ -29,6 +29,7 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
+    "concurrently": "^10.0.6",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
     "vite": "^8.0.3",
