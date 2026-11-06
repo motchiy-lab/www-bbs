@@ -104,7 +104,11 @@ class ApiError extends Error {
 app.use(
   "/*",
   cors({
-    origin: allowedOrigins,
+    origin: (origin) =>
+      allowedOrigins.includes(origin) ||
+      /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(origin)
+        ? origin
+        : null,
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "X-Anonymous-Id"],
   }),
@@ -404,7 +408,6 @@ app.get("/board", async (context) => {
       createdAt: post.createdAt.toISOString(),
       expiresAt: post.expiresAt?.toISOString() ?? null,
       returned: post.status === "completed",
-      isCreator: post.creatorId === userId,
     })),
     sent: createdLetters.map((post) => ({
       id: post._id,
@@ -432,12 +435,10 @@ app.post("/posts", async (context) => {
     body,
     notes: [],
     receivedUserIds: [userId],
-    currentRecipientId: userId,
-    status: "active",
+    currentRecipientId: null,
+    status: "waiting",
     createdAt: now,
-    expiresAt: new Date(
-      now.getTime() + settings.recipientTimeoutSeconds * 1000,
-    ),
+    expiresAt: null,
   };
 
   await getOrCreateUser(userId, { touch: true });

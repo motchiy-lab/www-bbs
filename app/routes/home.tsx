@@ -29,7 +29,6 @@ type Letter = {
   createdAt: string;
   expiresAt: string | null;
   returned: boolean;
-  isCreator: boolean;
 };
 
 type SentLetter = {
@@ -479,9 +478,7 @@ export default function Home() {
                             </div>
                             <div className="letter-actions">
                               <span className="letter-cost-note">
-                                {letter.isCreator
-                                  ? "オンラインの人へランダムに回します"
-                                  : `返却 ${returnCost} ／ 書き込み +${writingCost} クレジット`}
+                                {`返却 ${returnCost} ／ 書き込み +${writingCost} クレジット`}
                               </span>
                               <button
                                 className="submit-button secondary-button"
@@ -491,20 +488,18 @@ export default function Home() {
                               >
                                 {busy ? "回送中…" : "次の人へ流す"}
                               </button>
-                              {!letter.isCreator && (
-                                <button
-                                  className="submit-button"
-                                  type="button"
-                                  disabled={
-                                    busy ||
-                                    (session?.credits ?? 0) <
-                                      returnCost + (drafts[letter.id]?.trim() ? writingCost : 0)
-                                  }
-                                  onClick={() => void advanceLetter(letter, "creator")}
-                                >
-                                  作成者へ返す
-                                </button>
-                              )}
+                              <button
+                                className="submit-button"
+                                type="button"
+                                disabled={
+                                  busy ||
+                                  (session?.credits ?? 0) <
+                                    returnCost + (drafts[letter.id]?.trim() ? writingCost : 0)
+                                }
+                                onClick={() => void advanceLetter(letter, "creator")}
+                              >
+                                作成者へ返す
+                              </button>
                             </div>
                           </div>
                         )}
