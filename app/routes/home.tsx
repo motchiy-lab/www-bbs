@@ -264,10 +264,8 @@ export default function Home() {
     <div className="site-shell">
       <header className="topbar">
         <a className="brand" href={appBaseUrl} aria-label="ことのは便箋 ホーム">
-          <span className="brand-mark" aria-hidden="true">
-            <span />
-            <span />
-            <span />
+          <span className="brand-icon-frame" aria-hidden="true">
+            <img className="brand-icon" src="/favicon.png" alt="" />
           </span>
           <span>ことのは<span className="brand-light">便箋</span></span>
         </a>

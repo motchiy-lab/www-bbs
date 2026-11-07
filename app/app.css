@@ -119,27 +119,24 @@ textarea:focus-visible {
   font-weight: 500;
 }
 
-.brand-mark {
-  width: 28px;
-  height: 28px;
-  padding: 6px;
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  border: 1px solid rgb(255 255 255 / 50%);
-  border-radius: 9px 9px 9px 3px;
-  background: rgb(255 255 255 / 12%);
-}
-
-.brand-mark span {
-  width: 4px;
-  border-radius: 4px;
+.brand-icon-frame {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: 1px;
+  border-radius: 50%;
   background: var(--white);
 }
 
-.brand-mark span:nth-child(1) { height: 7px; }
-.brand-mark span:nth-child(2) { height: 12px; }
-.brand-mark span:nth-child(3) { height: 9px; }
+.brand-icon {
+  display: block;
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+}
 
 .topbar-note {
   display: flex;
