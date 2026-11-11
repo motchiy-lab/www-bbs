@@ -141,6 +141,22 @@ export function meta({}: Route.MetaArgs) {
       name: "description",
       content: "匿名で便箋をつくり、ひとことを添えて次の人へ回す掲示板です。",
     },
+    
+    { property: "og:type", content: "website" },
+    { property: "og:site_name", content: "ことのは便箋" },
+    { property: "og:title", content: "ことのは便箋 — ことばを、そっとつないで。" },
+    { property: "og:description", content: "匿名で便箋をつくり、ひとことを添えて次の人へ回す掲示板です。" },
+    { property: "og:url", content: "https://bbs.motchiy.com/" },
+    { property: "og:image", content: "https://bbs.motchiy.com/ogp.png" },
+    { property: "og:image:alt", content: "ことのは便箋 — ことばを、そっとつないで。" },
+    { property: "og:image:type", content: "image/png" },
+    { property: "og:image:width", content: "977" },
+    { property: "og:image:height", content: "512" },
+    { property: "og:locale", content: "ja_JP" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: "ことのは便箋 — ことばを、そっとつないで。" },
+    { name: "twitter:description", content: "匿名で便箋をつくり、ひとことを添えて次の人へ回す掲示板です。" },
+    { name: "twitter:image", content: "https://bbs.motchiy.com/ogp.png" },
   ];
 }
 
