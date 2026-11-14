@@ -281,43 +281,6 @@ async function chooseNextRecipient(post, now = new Date()) {
   return chooseRandom(online.length > 0 ? online : availableCandidates);
 }
 
-async function deliverOrWait(post) {
-  await withRecipientAssignmentLock(async () => {
-    const now = new Date();
-    const nextRecipient = await chooseNextRecipient(post, now);
-    if (!nextRecipient) {
-      await posts.updateOne(
-        {
-          _id: post._id,
-          status: "active",
-          currentRecipientId: post.currentRecipientId,
-        },
-        {
-          $set: {
-            status: "waiting",
-            currentRecipientId: null,
-            expiresAt: null,
-          },
-        },
-      );
-      return;
-    }
-
-    await posts.updateOne(
-      { _id: post._id, status: "active", currentRecipientId: post.currentRecipientId },
-      {
-        $set: {
-          currentRecipientId: nextRecipient._id,
-          expiresAt: new Date(
-            now.getTime() + settings.recipientTimeoutSeconds * 1000,
-          ),
-        },
-        $addToSet: { receivedUserIds: nextRecipient._id },
-      },
-    );
-  });
-}
-
 async function dispatchWaitingLetters() {
   const waiting = await posts
     .find({ version: 2, status: "waiting" })
@@ -353,42 +316,84 @@ async function dispatchWaitingLetters() {
 }
 
 async function expireLetter(postId, recipientId, expiresAt) {
-  const now = new Date();
-  const post = await posts.findOne({
-    _id: postId,
-    version: 2,
-    status: "active",
-    currentRecipientId: recipientId,
-    expiresAt: { $eq: expiresAt, $lte: now },
-  });
-  if (post) {
-    await deliverOrWait(post);
-  }
-}
-
-let sweepRunning = false;
-async function sweepLetters() {
-  if (sweepRunning) return;
-  sweepRunning = true;
-  try {
+  await withRecipientAssignmentLock(async () => {
     const now = new Date();
-    const expired = await posts
-      .find({
+    const post = await posts.findOne({
+      _id: postId,
+      version: 2,
+      status: "active",
+      currentRecipientId: recipientId,
+      expiresAt: { $eq: expiresAt, $lte: now },
+    });
+    if (!post) return;
+
+    const nextRecipient = await chooseNextRecipient(post, now);
+    if (!nextRecipient) {
+      await posts.updateOne(
+        {
+          _id: post._id,
+          version: 2,
+          status: "active",
+          currentRecipientId: recipientId,
+          expiresAt: post.expiresAt,
+        },
+        {
+          $set: {
+            status: "waiting",
+            currentRecipientId: null,
+            expiresAt: null,
+          },
+        },
+      );
+      return;
+    }
+
+    await posts.updateOne(
+      {
+        _id: post._id,
         version: 2,
         status: "active",
-        expiresAt: { $lte: now },
-      })
-      .project({ _id: 1, currentRecipientId: 1, expiresAt: 1 })
-      .toArray();
-    for (const post of expired) {
-      await expireLetter(post._id, post.currentRecipientId, post.expiresAt);
+        currentRecipientId: recipientId,
+        expiresAt: post.expiresAt,
+      },
+      {
+        $set: {
+          currentRecipientId: nextRecipient._id,
+          expiresAt: new Date(
+            now.getTime() + settings.recipientTimeoutSeconds * 1000,
+          ),
+        },
+        $addToSet: { receivedUserIds: nextRecipient._id },
+      },
+    );
+  });
+}
+
+let sweepPromise;
+async function sweepLetters() {
+  if (sweepPromise) return sweepPromise;
+  sweepPromise = (async () => {
+    try {
+      const now = new Date();
+      const expired = await posts
+        .find({
+          version: 2,
+          status: "active",
+          expiresAt: { $lte: now },
+        })
+        .project({ _id: 1, currentRecipientId: 1, expiresAt: 1 })
+        .toArray();
+      for (const post of expired) {
+        await expireLetter(post._id, post.currentRecipientId, post.expiresAt);
+      }
+      await dispatchWaitingLetters();
+    } catch (error) {
+      console.error("Failed to advance expired letters.", error);
+    } finally {
+      sweepPromise = undefined;
     }
-    await dispatchWaitingLetters();
-  } catch (error) {
-    console.error("Failed to advance expired letters.", error);
-  } finally {
-    sweepRunning = false;
-  }
+  })();
+  return sweepPromise;
 }
 
 app.get("/health", (context) => context.json({ status: "ok" }));
@@ -402,7 +407,7 @@ app.get("/emojis", (context) =>
 app.get("/session", async (context) => {
   const userId = getUserId(context);
   const user = await getOrCreateUser(userId, { touch: true });
-  await dispatchWaitingLetters();
+  await sweepLetters();
   const now = Date.now();
   const nextCreditAt =
     user.credits >= settings.maxCredits
@@ -428,7 +433,7 @@ app.get("/session", async (context) => {
 app.get("/board", async (context) => {
   const userId = getUserId(context);
   await getOrCreateUser(userId, { touch: true });
-  await dispatchWaitingLetters();
+  await sweepLetters();
 
   const [heldLetters, createdLetters] = await Promise.all([
     posts
