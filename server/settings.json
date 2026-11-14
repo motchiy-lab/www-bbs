@@ -1,11 +1,11 @@
 {
-  "maxCredits": 100,
-  "initialCredits": 50,
+  "maxCredits": 240,
+  "initialCredits": 100,
   "creditsPerRegen": 1,
-  "regenIntervalSeconds": 300,
-  "createLetterCost": 30,
+  "regenIntervalSeconds": 180,
+  "createLetterCost": 20,
   "returnLetterCost": 10,
   "writeCost": 5,
   "recipientTimeoutSeconds": 300,
-  "onlineWindowSeconds": 90
+  "onlineWindowSeconds": 45
 }
