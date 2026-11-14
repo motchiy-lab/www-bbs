@@ -456,6 +456,7 @@ app.get("/board", async (context) => {
       createdAt: post.createdAt.toISOString(),
       expiresAt: post.expiresAt?.toISOString() ?? null,
       returned: post.status === "completed",
+      read: post.status === "completed" && post.creatorReadAt instanceof Date,
     })),
     sent: createdLetters.map((post) => ({
       id: post._id,
@@ -464,6 +465,46 @@ app.get("/board", async (context) => {
       createdAt: post.createdAt.toISOString(),
     })),
   });
+});
+
+app.post("/posts/read-returned", async (context) => {
+  const userId = getUserId(context);
+  const result = await posts.updateMany(
+    {
+      version: 2,
+      creatorId: userId,
+      status: "completed",
+      creatorReadAt: null,
+    },
+    { $set: { creatorReadAt: new Date() } },
+  );
+  return context.json({ markedCount: result.modifiedCount });
+});
+
+app.post("/posts/:postId/read", async (context) => {
+  const userId = getUserId(context);
+  const result = await posts.updateOne(
+    {
+      _id: context.req.param("postId"),
+      version: 2,
+      creatorId: userId,
+      status: "completed",
+      creatorReadAt: null,
+    },
+    { $set: { creatorReadAt: new Date() } },
+  );
+  if (result.matchedCount !== 1) {
+    const post = await posts.findOne({
+      _id: context.req.param("postId"),
+      version: 2,
+      creatorId: userId,
+      status: "completed",
+    });
+    if (!post) {
+      throw new ApiError("返却済みの便箋が見つかりません。", 404);
+    }
+  }
+  return context.json({ ok: true });
 });
 
 app.post("/posts", async (context) => {
@@ -548,6 +589,7 @@ app.post("/posts/:postId/advance", async (context) => {
             currentRecipientId: post.creatorId,
             expiresAt: null,
             returnedAt: now,
+            creatorReadAt: null,
           }
         : {
             status: "waiting",

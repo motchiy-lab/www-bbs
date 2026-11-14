@@ -832,6 +832,48 @@ textarea:focus-visible {
   gap: 9px;
 }
 
+.letter-heading-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.read-status {
+  color: #77749f;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.read-status.unread {
+  color: #a0525b;
+  font-weight: 700;
+}
+
+.letter-fold-button {
+  padding: 5px 8px;
+  border: 1px solid #d9d7e8;
+  border-radius: 5px;
+  background: #f4f3f9;
+  color: var(--primary-color);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.letter-fold-button:hover:not(:disabled) {
+  background: var(--white);
+}
+
+.letter-fold-button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.letter-collapsed-summary {
+  margin: 10px 0 0;
+  color: #777582;
+  font-size: 12px;
+}
+
 .letter-stamp,
 .sent-mark {
   width: 31px;
@@ -973,6 +1015,12 @@ textarea:focus-visible {
 .sent-list {
   display: grid;
   gap: 7px;
+}
+
+.returned-letters-toolbar {
+  margin: -3px 0 8px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .sent-item {

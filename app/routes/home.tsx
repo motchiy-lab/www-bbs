@@ -29,6 +29,7 @@ type Letter = {
   createdAt: string;
   expiresAt: string | null;
   returned: boolean;
+  read: boolean;
 };
 
 type SentLetter = {
@@ -169,6 +170,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [busyLetter, setBusyLetter] = useState("");
+  const [expandedReturnedLetters, setExpandedReturnedLetters] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [markingAllReturnedRead, setMarkingAllReturnedRead] = useState(false);
   const [error, setError] = useState("");
   const [now, setNow] = useState(Date.now());
   const didLoadRef = useRef(false);
@@ -252,6 +257,61 @@ export default function Home() {
       await loadBoard();
     } finally {
       setBusyLetter("");
+    }
+  }
+
+  async function toggleReturnedLetter(letter: Letter) {
+    if (!letter.read) {
+      setBusyLetter(letter.id);
+      setError("");
+      try {
+        await fetchJson(`/posts/${encodeURIComponent(letter.id)}/read`, {
+          method: "POST",
+        });
+        setExpandedReturnedLetters((current) => {
+          const next = new Set(current);
+          next.delete(letter.id);
+          return next;
+        });
+        await loadBoard();
+      } catch (readError) {
+        setError(
+          readError instanceof Error
+            ? readError.message
+            : "既読にできませんでした。",
+        );
+      } finally {
+        setBusyLetter("");
+      }
+      return;
+    }
+
+    setExpandedReturnedLetters((current) => {
+      const next = new Set(current);
+      if (next.has(letter.id)) {
+        next.delete(letter.id);
+      } else {
+        next.add(letter.id);
+      }
+      return next;
+    });
+  }
+
+  async function markAllReturnedRead() {
+    setMarkingAllReturnedRead(true);
+    setError("");
+    try {
+      await fetchJson("/posts/read-returned", { method: "POST" });
+      setExpandedReturnedLetters(new Set());
+      await loadBoard();
+    } catch (readError) {
+      setError(
+        readError instanceof Error
+          ? readError.message
+          : "返却済み便箋を既読にできませんでした。",
+      );
+    } finally {
+      setMarkingAllReturnedRead(false);
     }
   }
 
@@ -413,6 +473,18 @@ export default function Home() {
                 <h3>手元にある便箋</h3>
                 <span><span className="feed-dot" />受け取った便箋だけ表示</span>
               </div>
+              {!loading && board.letters.some((letter) => letter.returned) && (
+                <div className="returned-letters-toolbar">
+                  <button
+                    className="letter-fold-button"
+                    type="button"
+                    disabled={markingAllReturnedRead}
+                    onClick={() => void markAllReturnedRead()}
+                  >
+                    {markingAllReturnedRead ? "更新中…" : "すべて既読にして折りたたむ"}
+                  </button>
+                </div>
+              )}
               {loading ? (
                 <div className="feed-state card"><span className="loading-spinner" /> 便箋を確認しています…</div>
               ) : board.letters.length === 0 ? (
@@ -427,29 +499,61 @@ export default function Home() {
                     const writingCost = session?.settings.writeCost ?? 0;
                     const returnCost = session?.settings.returnLetterCost ?? 0;
                     const busy = busyLetter === letter.id;
+                    const collapsed =
+                      letter.returned &&
+                      letter.read &&
+                      !expandedReturnedLetters.has(letter.id);
                     return (
                       <article className="letter-card card" key={letter.id}>
                         <div className="letter-card-heading">
                           <span className="letter-stamp" aria-hidden="true">✉</span>
-                          <div>
+                          <div className="letter-heading-copy">
                             <strong>{letter.returned ? "便箋が返ってきました" : "便箋が届きました"}</strong>
                             <time dateTime={letter.createdAt}>{formatDate(letter.createdAt)} に作成</time>
                           </div>
+                          {letter.returned && (
+                            <>
+                              <span className={`read-status${letter.read ? "" : " unread"}`}>
+                                {letter.read ? "既読" : "未読"}
+                              </span>
+                              <button
+                                className="letter-fold-button"
+                                type="button"
+                                aria-expanded={!collapsed}
+                                disabled={busy || markingAllReturnedRead}
+                                onClick={() => void toggleReturnedLetter(letter)}
+                              >
+                                {collapsed
+                                  ? "開く"
+                                  : letter.read
+                                    ? "折りたたむ"
+                                    : "既読にして折りたたむ"}
+                              </button>
+                            </>
+                          )}
                           {!letter.returned && (
                             <span className="letter-timer">{formatRemaining(letter.expiresAt, now)}</span>
                           )}
                         </div>
-                        <p className="letter-body">{renderBody(letter.body, emojis)}</p>
-                        {letter.notes.length > 0 && (
-                          <div className="letter-notes">
-                            <h4>これまでの書き込み（{letter.notes.length}）</h4>
-                            {letter.notes.map((note, index) => (
-                              <div className="letter-note" key={`${note.createdAt}-${index}`}>
-                                <p>{renderBody(note.text, emojis)}</p>
-                                <time dateTime={note.createdAt}>{formatDate(note.createdAt)}</time>
+                        {collapsed ? (
+                          <p className="letter-collapsed-summary">
+                            書き込み {letter.notes.length} 件 · 既読
+                          </p>
+                        ) : (
+                          <>
+                            <p className="letter-body">{renderBody(letter.body, emojis)}</p>
+                            {letter.notes.length > 0 && (
+                              <div className="letter-notes">
+                                <h4>これまでの書き込み（{letter.notes.length}）</h4>
+                                {letter.notes.map((note, index) => (
+                                  <div className="letter-note" key={`${note.createdAt}-${index}`}>
+                                    <p>{renderBody(note.text, emojis)}</p>
+                                    <time dateTime={note.createdAt}>{formatDate(note.createdAt)}</time>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
+                            )}
+                          </>
                         )}
                         {!letter.returned && (
                           <div className="letter-controls">
