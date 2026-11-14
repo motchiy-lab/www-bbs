@@ -42,6 +42,7 @@ const positiveSettings = [
   "writeCost",
   "recipientTimeoutSeconds",
   "onlineWindowSeconds",
+  "maxConcurrentReceivedLetters",
 ];
 if (
   positiveSettings.some(
@@ -52,7 +53,9 @@ if (
   settings.createLetterCost > settings.maxCredits ||
   settings.returnLetterCost + settings.writeCost > settings.maxCredits
 ) {
-  throw new Error("server/settings.json contains invalid credit or timing settings.");
+  throw new Error(
+    "server/settings.json contains invalid credit, timing, or concurrent-letter settings.",
+  );
 }
 
 const emojiConfig = JSON.parse(
@@ -216,6 +219,21 @@ function chooseRandom(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+let recipientAssignmentQueue = Promise.resolve();
+async function withRecipientAssignmentLock(action) {
+  const previous = recipientAssignmentQueue;
+  let release;
+  recipientAssignmentQueue = new Promise((resolve) => {
+    release = resolve;
+  });
+  await previous;
+  try {
+    return await action();
+  } finally {
+    release();
+  }
+}
+
 async function chooseNextRecipient(post, now = new Date()) {
   const alreadyReceived = new Set([
     ...(Array.isArray(post.receivedUserIds) ? post.receivedUserIds : []),
@@ -228,71 +246,67 @@ async function chooseNextRecipient(post, now = new Date()) {
     return null;
   }
 
+  const activeLetters = await posts
+    .aggregate([
+      {
+        $match: {
+          version: 2,
+          status: "active",
+          currentRecipientId: { $in: candidates.map((candidate) => candidate._id) },
+          $expr: { $ne: ["$creatorId", "$currentRecipientId"] },
+        },
+      },
+      { $group: { _id: "$currentRecipientId", count: { $sum: 1 } } },
+    ])
+    .toArray();
+  const receivedCounts = new Map(
+    activeLetters.map(({ _id, count }) => [_id, count]),
+  );
+  const availableCandidates = candidates.filter(
+    (candidate) =>
+      (receivedCounts.get(candidate._id) ?? 0) <
+      settings.maxConcurrentReceivedLetters,
+  );
+  if (availableCandidates.length === 0) {
+    return null;
+  }
+
   const onlineAfter = new Date(
     now.getTime() - settings.onlineWindowSeconds * 1000,
   );
-  const online = candidates.filter(
+  const online = availableCandidates.filter(
     (candidate) =>
       candidate.lastSeenAt instanceof Date && candidate.lastSeenAt >= onlineAfter,
   );
-  return chooseRandom(online.length > 0 ? online : candidates);
+  return chooseRandom(online.length > 0 ? online : availableCandidates);
 }
 
-async function deliverOrWait(post, now = new Date()) {
-  const nextRecipient = await chooseNextRecipient(post, now);
-  if (!nextRecipient) {
-    await posts.updateOne(
-      {
-        _id: post._id,
-        status: "active",
-        currentRecipientId: post.currentRecipientId,
-      },
-      {
-        $set: {
-          status: "waiting",
-          currentRecipientId: null,
-          expiresAt: null,
-        },
-      },
-    );
-    return;
-  }
-
-  await posts.updateOne(
-    { _id: post._id, status: "active", currentRecipientId: post.currentRecipientId },
-    {
-      $set: {
-        currentRecipientId: nextRecipient._id,
-        expiresAt: new Date(
-          now.getTime() + settings.recipientTimeoutSeconds * 1000,
-        ),
-      },
-      $addToSet: { receivedUserIds: nextRecipient._id },
-    },
-  );
-}
-
-async function dispatchWaitingLetters() {
-  const waiting = await posts
-    .find({ version: 2, status: "waiting" })
-    .toArray();
-  for (const post of waiting) {
-    const current = await posts.findOne({
-      _id: post._id,
-      version: 2,
-      status: "waiting",
-    });
-    if (!current) continue;
-
-    const nextRecipient = await chooseNextRecipient(current);
-    if (!nextRecipient) continue;
-
+async function deliverOrWait(post) {
+  await withRecipientAssignmentLock(async () => {
     const now = new Date();
+    const nextRecipient = await chooseNextRecipient(post, now);
+    if (!nextRecipient) {
+      await posts.updateOne(
+        {
+          _id: post._id,
+          status: "active",
+          currentRecipientId: post.currentRecipientId,
+        },
+        {
+          $set: {
+            status: "waiting",
+            currentRecipientId: null,
+            expiresAt: null,
+          },
+        },
+      );
+      return;
+    }
+
     await posts.updateOne(
-      { _id: current._id, version: 2, status: "waiting" },
+      { _id: post._id, status: "active", currentRecipientId: post.currentRecipientId },
       {
         $set: {
-          status: "active",
           currentRecipientId: nextRecipient._id,
           expiresAt: new Date(
             now.getTime() + settings.recipientTimeoutSeconds * 1000,
@@ -301,6 +315,40 @@ async function dispatchWaitingLetters() {
         $addToSet: { receivedUserIds: nextRecipient._id },
       },
     );
+  });
+}
+
+async function dispatchWaitingLetters() {
+  const waiting = await posts
+    .find({ version: 2, status: "waiting" })
+    .toArray();
+  for (const post of waiting) {
+    await withRecipientAssignmentLock(async () => {
+      const current = await posts.findOne({
+        _id: post._id,
+        version: 2,
+        status: "waiting",
+      });
+      if (!current) return;
+
+      const nextRecipient = await chooseNextRecipient(current);
+      if (!nextRecipient) return;
+
+      const now = new Date();
+      await posts.updateOne(
+        { _id: current._id, version: 2, status: "waiting" },
+        {
+          $set: {
+            status: "active",
+            currentRecipientId: nextRecipient._id,
+            expiresAt: new Date(
+              now.getTime() + settings.recipientTimeoutSeconds * 1000,
+            ),
+          },
+          $addToSet: { receivedUserIds: nextRecipient._id },
+        },
+      );
+    });
   }
 }
 
@@ -314,7 +362,7 @@ async function expireLetter(postId, recipientId, expiresAt) {
     expiresAt: { $eq: expiresAt, $lte: now },
   });
   if (post) {
-    await deliverOrWait(post, now);
+    await deliverOrWait(post);
   }
 }
 

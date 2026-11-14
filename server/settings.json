@@ -7,5 +7,6 @@
   "returnLetterCost": 10,
   "writeCost": 5,
   "recipientTimeoutSeconds": 300,
-  "onlineWindowSeconds": 45
+  "onlineWindowSeconds": 45,
+  "maxConcurrentReceivedLetters": 1
 }
