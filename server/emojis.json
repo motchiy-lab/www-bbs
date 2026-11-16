@@ -1,7 +1,37 @@
 [
   {
     "code": "mikuri",
-    "label": "みくり",
+    "label": "ミクリではないなにか",
     "file": "mikuri.png"
-  }
+  },
+  {
+    "code": "kagamimochi",
+    "label": "鏡餅",
+    "file": "kagamimochi.png"
+  },
+  {
+    "code": "glasses",
+    "label": "ドットサングラス",
+    "file": "glasses.png"
+  },
+  {
+    "code": "feather",
+    "label": "羽ペン",
+    "file": "feather.png"
+  },
+  {
+    "code": "ahchaw_tea",
+    "label": "アーチャウ茶",
+    "file": "ahchaw_tea.png"
+  },
+  {
+    "code": "cotton_candy",
+    "label": "わたあめ",
+    "file": "cotton_candy.png"
+  },
+  {
+    "code": "bottle_mail",
+    "label": "ボトルメール",
+    "file": "bottle_mail.png"
+  },
 ]
