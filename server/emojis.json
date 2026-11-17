@@ -34,4 +34,40 @@
     "label": "ボトルメール",
     "file": "bottle_mail.png"
   },
+  
+  {
+    "code": "pyro",
+    "label": "炎元素",
+    "file": "element_pyro.png"
+  },
+  {
+    "code": "hydro",
+    "label": "水元素",
+    "file": "element_hydro.png"
+  },
+  {
+    "code": "dendro",
+    "label": "草元素",
+    "file": "element_dendro.png"
+  },
+  {
+    "code": "cyro",
+    "label": "氷元素",
+    "file": "element_cyro.png"
+  },
+  {
+    "code": "electro",
+    "label": "雷元素",
+    "file": "element_electro.png"
+  },
+  {
+    "code": "geo",
+    "label": "岩元素",
+    "file": "element_geo.png"
+  },
+  {
+    "code": "anemo",
+    "label": "風元素",
+    "file": "element_anemo.png"
+  },
 ]
