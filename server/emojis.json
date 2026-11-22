@@ -35,6 +35,11 @@
     "file": "bottle_mail.png"
   },
   {
+    "code": "anemo",
+    "label": "風元素",
+    "file": "element_anemo.png"
+  },
+  {
     "code": "pyro",
     "label": "炎元素",
     "file": "element_pyro.png"
@@ -63,10 +68,5 @@
     "code": "geo",
     "label": "岩元素",
     "file": "element_geo.png"
-  },
-  {
-    "code": "anemo",
-    "label": "風元素",
-    "file": "element_anemo.png"
   }
 ]
