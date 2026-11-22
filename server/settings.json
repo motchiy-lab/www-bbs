@@ -1,6 +1,6 @@
 {
   "maxCredits": 180,
-  "initialCredits": 90,
+  "initialCredits": 60,
   "creditsPerRegen": 1,
   "regenIntervalSeconds": 180,
   "createLetterCost": 30,
