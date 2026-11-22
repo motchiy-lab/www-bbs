@@ -1,0 +1,42 @@
+name: CD - Restart systemd
+
+on:
+  workflow_run:
+    workflows:
+      - "CI - React Router"
+      - "CI - Hono API"
+    branches: [ main ]
+    types:
+      - completed
+
+concurrency:
+  group: cd-systemd-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux]
+    if: >
+      ${{
+        github.event.workflow_run.conclusion == 'success'
+      }}
+
+    steps:
+      - name: Checkout repository at commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Prepare build artifacts
+        run: |
+          npm ci
+          npm run build
+          npm --prefix server ci
+          npm --prefix server run build
+
+      - name: Restart systemd services
+        run: |
+          sudo systemctl restart hono-api.service
+          sudo systemctl restart react-router.service
+          sudo systemctl is-active --quiet hono-api.service
+          sudo systemctl is-active --quiet react-router.service
