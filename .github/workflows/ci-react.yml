@@ -1,4 +1,4 @@
-name: CI - React Router
+name: CI - React
 
 on:
   push:

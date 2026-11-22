@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows:
       - "CI - Hono API"
+      - "CI - React"
     branches: [ main ]
     types:
       - completed
