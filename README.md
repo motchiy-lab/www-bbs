@@ -32,6 +32,12 @@ CloudflareでホストするReact Routerフロントエンドと、MongoDBに接
 3. `.env.example` を `.env` にコピーします。ローカルAPIのベースURLは `http://localhost:8787/www-bbs` です。
 4. `npm run dev` を実行すると、Hono APIとフロントエンドが同時に起動します。ターミナルを終了すると両方停止します。APIだけを起動する場合は `npm run dev:api` を使います。
 
+## テスト
+
+- React側: `npm run test:react`（Vitestで画面表示ロジックをテスト）
+- Hono側: `npm run test:hono`（Node.js標準テストでクレジット計算をテスト）
+- 両方: `npm test`
+
 ## 絵文字の追加
 
 1. 画像を `public\emojis\` にアップロードします。PNG、GIF、WebP、JPG/JPEGを使用できます。

@@ -115,7 +115,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return result;
 }
 
-function renderBody(body: string, emojis: Emoji[]) {
+export function renderBody(body: string, emojis: Emoji[]) {
   const emojiByCode = new Map(emojis.map((emoji) => [emoji.code, emoji]));
 
   return body.split(/(:[a-z0-9_-]+:)/gi).map((part, index) => {
@@ -145,7 +145,7 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function formatRemaining(value: string | null, now: number) {
+export function formatRemaining(value: string | null, now: number) {
   if (!value) return "返却済み";
   const seconds = Math.max(
     0,

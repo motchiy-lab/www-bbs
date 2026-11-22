@@ -7,6 +7,9 @@
     "dev": "concurrently --kill-others --names api,web \"npm:dev:api\" \"react-router dev\"",
     "dev:api": "node --watch server/index.js",
     "start:api": "node server/index.js",
+    "test": "npm run test:react && npm run test:hono",
+    "test:react": "vitest run --config vitest.config.ts",
+    "test:hono": "node --test server/credits.test.js",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
     "deploy": "npm run build && wrangler deploy",
     "preview": "npm run build && vite preview",
@@ -33,6 +36,7 @@
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
     "vite": "^8.0.3",
+    "vitest": "^5.1.1",
     "wrangler": "^4.156.0"
   }
 }

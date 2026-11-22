@@ -24,7 +24,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Test & Build
+      - name: Test
         run: |
-          npm test
-          npm run build
+          npm run typecheck
+          npm test:react
+
+      - name: Build
+        run: npm run build
