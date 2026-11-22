@@ -12,15 +12,15 @@ CloudflareでホストするReact Routerフロントエンドと、MongoDBに接
 
 | 設定 | 初期値 | 意味 |
 | --- | ---: | --- |
-| `maxCredits` | 100 | 所持上限 |
-| `initialCredits` | 50 | 初回付与 |
+| `maxCredits` | 180 | 所持上限 |
+| `initialCredits` | 90 | 初回付与 |
 | `creditsPerRegen` | 1 | 回復ごとの付与量 |
-| `regenIntervalSeconds` | 300 | 回復間隔（秒） |
-| `createLetterCost` | 30 | 便箋の作成 |
+| `regenIntervalSeconds` | 180 | 回復間隔（秒） |
+| `createLetterCost` | 20 | 便箋の作成 |
 | `returnLetterCost` | 10 | 作成者への返却 |
 | `writeCost` | 5 | 書き込み（返却時は返却費用に加算） |
-| `recipientTimeoutSeconds` | 300 | 受取後の自動回送までの時間（秒） |
-| `onlineWindowSeconds` | 90 | オンラインとみなす最終アクセス時間（秒） |
+| `recipientTimeoutSeconds` | 180 | 受取後の自動回送までの時間（秒） |
+| `onlineWindowSeconds` | 45 | オンラインとみなす最終アクセス時間（秒） |
 | `maxConcurrentReceivedLetters` | 1 | 1人が同時に受け取れる、作成者でない便箋の上限 |
 
 次の受取人へ流す操作と、時間切れによる自動回送にはクレジットを消費しません。既存のニックネーム付き投稿は新しい便箋として移行されず、掲示板にも表示されません。既存データはMongoDB内に残るため、不要になった場合はバックアップ後にデータベース管理者が削除してください。
