@@ -156,7 +156,7 @@ function formatRemaining(value: string | null, now: number) {
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "ことのは便箋 — ことばを、そっとつないで。" },
+    { title: "ことのは便箋 - ことばを、そっとつないで。" },
     {
       name: "description",
       content: "匿名で便箋をつくり、ひとことを添えて次の人へ回す掲示板です。",
@@ -166,7 +166,7 @@ export function meta({}: Route.MetaArgs) {
     { property: "og:site_name", content: "ことのは便箋" },
     {
       property: "og:title",
-      content: "ことのは便箋 — ことばを、そっとつないで。",
+      content: "ことのは便箋 - ことばを、そっとつないで。",
     },
     {
       property: "og:description",
@@ -176,7 +176,7 @@ export function meta({}: Route.MetaArgs) {
     { property: "og:image", content: "https://bbs.motchiy.com/ogp.png" },
     {
       property: "og:image:alt",
-      content: "ことのは便箋 — ことばを、そっとつないで。",
+      content: "ことのは便箋 - ことばを、そっとつないで。",
     },
     { property: "og:image:type", content: "image/png" },
     { property: "og:image:width", content: "977" },
@@ -185,7 +185,7 @@ export function meta({}: Route.MetaArgs) {
     { name: "twitter:card", content: "summary_large_image" },
     {
       name: "twitter:title",
-      content: "ことのは便箋 — ことばを、そっとつないで。",
+      content: "ことのは便箋 - ことばを、そっとつないで。",
     },
     {
       name: "twitter:description",
