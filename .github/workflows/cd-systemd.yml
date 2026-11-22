@@ -30,7 +30,7 @@ jobs:
       - name: Prepare build artifacts
         run: |
           npm ci
-          npm --prefix server run build
+          npm run build
 
       - name: Restart systemd services
         run: |
