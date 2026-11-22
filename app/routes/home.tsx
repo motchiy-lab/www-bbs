@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import type { Route } from "./+types/home";
 
 type Emoji = {
@@ -60,7 +66,9 @@ function getAnonymousId() {
     }
     return id;
   } catch {
-    throw new Error("匿名IDを保存できません。ブラウザーのサイトデータ設定を確認してください。");
+    throw new Error(
+      "匿名IDを保存できません。ブラウザーのサイトデータ設定を確認してください。",
+    );
   }
 }
 
@@ -70,7 +78,9 @@ function emojiUrl(file: string) {
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   if (!apiBaseUrl) {
-    throw new Error("VITE_API_BASE_URLを設定してHono APIのURLを指定してください。");
+    throw new Error(
+      "VITE_API_BASE_URLを設定してHono APIのURLを指定してください。",
+    );
   }
   const anonymousId = getAnonymousId();
 
@@ -85,16 +95,22 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch {
-    throw new Error("Hono APIに接続できません。APIのURLとサーバーの状態を確認してください。");
+    throw new Error(
+      "Hono APIに接続できません。APIのURLとサーバーの状態を確認してください。",
+    );
   }
 
   if (!response.headers.get("content-type")?.includes("application/json")) {
-    throw new Error("Hono APIからJSON応答がありません。APIのURL設定を確認してください。");
+    throw new Error(
+      "Hono APIからJSON応答がありません。APIのURL設定を確認してください。",
+    );
   }
 
   const result = (await response.json()) as T & { error?: string };
   if (!response.ok) {
-    throw new Error(result.error ?? `リクエストに失敗しました (${response.status})`);
+    throw new Error(
+      result.error ?? `リクエストに失敗しました (${response.status})`,
+    );
   }
   return result;
 }
@@ -131,7 +147,10 @@ function formatDate(value: string) {
 
 function formatRemaining(value: string | null, now: number) {
   if (!value) return "返却済み";
-  const seconds = Math.max(0, Math.ceil((new Date(value).getTime() - now) / 1000));
+  const seconds = Math.max(
+    0,
+    Math.ceil((new Date(value).getTime() - now) / 1000),
+  );
   return `あと${Math.floor(seconds / 60)}分${String(seconds % 60).padStart(2, "0")}秒`;
 }
 
@@ -142,21 +161,36 @@ export function meta({}: Route.MetaArgs) {
       name: "description",
       content: "匿名で便箋をつくり、ひとことを添えて次の人へ回す掲示板です。",
     },
-    
+
     { property: "og:type", content: "website" },
     { property: "og:site_name", content: "ことのは便箋" },
-    { property: "og:title", content: "ことのは便箋 — ことばを、そっとつないで。" },
-    { property: "og:description", content: "匿名で便箋をつくり、ひとことを添えて次の人へ回す掲示板です。" },
+    {
+      property: "og:title",
+      content: "ことのは便箋 — ことばを、そっとつないで。",
+    },
+    {
+      property: "og:description",
+      content: "匿名で便箋をつくり、ひとことを添えて次の人へ回す掲示板です。",
+    },
     { property: "og:url", content: "https://bbs.motchiy.com/" },
     { property: "og:image", content: "https://bbs.motchiy.com/ogp.png" },
-    { property: "og:image:alt", content: "ことのは便箋 — ことばを、そっとつないで。" },
+    {
+      property: "og:image:alt",
+      content: "ことのは便箋 — ことばを、そっとつないで。",
+    },
     { property: "og:image:type", content: "image/png" },
     { property: "og:image:width", content: "977" },
     { property: "og:image:height", content: "512" },
     { property: "og:locale", content: "ja_JP" },
     { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: "ことのは便箋 — ことばを、そっとつないで。" },
-    { name: "twitter:description", content: "匿名で便箋をつくり、ひとことを添えて次の人へ回す掲示板です。" },
+    {
+      name: "twitter:title",
+      content: "ことのは便箋 — ことばを、そっとつないで。",
+    },
+    {
+      name: "twitter:description",
+      content: "匿名で便箋をつくり、ひとことを添えて次の人へ回す掲示板です。",
+    },
     { name: "twitter:image", content: "https://bbs.motchiy.com/ogp.png" },
   ];
 }
@@ -170,9 +204,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [busyLetter, setBusyLetter] = useState("");
-  const [expandedReturnedLetters, setExpandedReturnedLetters] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [expandedReturnedLetters, setExpandedReturnedLetters] = useState<
+    Set<string>
+  >(() => new Set());
   const [markingAllReturnedRead, setMarkingAllReturnedRead] = useState(false);
   const [error, setError] = useState("");
   const [now, setNow] = useState(Date.now());
@@ -226,7 +260,9 @@ export default function Home() {
       await loadBoard();
     } catch (submitError) {
       setError(
-        submitError instanceof Error ? submitError.message : "便箋を作成できませんでした。",
+        submitError instanceof Error
+          ? submitError.message
+          : "便箋を作成できませんでした。",
       );
     } finally {
       setSending(false);
@@ -252,7 +288,9 @@ export default function Home() {
       await loadBoard();
     } catch (actionError) {
       setError(
-        actionError instanceof Error ? actionError.message : "便箋を回せませんでした。",
+        actionError instanceof Error
+          ? actionError.message
+          : "便箋を回せませんでした。",
       );
       await loadBoard();
     } finally {
@@ -319,7 +357,7 @@ export default function Home() {
     const textarea = letterId
       ? replyTextareaRefs.current.get(letterId)
       : textareaRef.current;
-    const value = letterId ? drafts[letterId] ?? "" : body;
+    const value = letterId ? (drafts[letterId] ?? "") : body;
     const start = textarea?.selectionStart ?? value.length;
     const end = textarea?.selectionEnd ?? value.length;
     const shortcode = `:${emoji.code}:`;
@@ -332,7 +370,10 @@ export default function Home() {
     }
     requestAnimationFrame(() => {
       textarea?.focus();
-      textarea?.setSelectionRange(start + shortcode.length, start + shortcode.length);
+      textarea?.setSelectionRange(
+        start + shortcode.length,
+        start + shortcode.length,
+      );
     });
   }
 
@@ -343,7 +384,9 @@ export default function Home() {
           <span className="brand-icon-frame" aria-hidden="true">
             <img className="brand-icon" src="/favicon.png" alt="" />
           </span>
-          <span>ことのは<span className="brand-light">便箋</span></span>
+          <span>
+            ことのは<span className="brand-light">便箋</span>
+          </span>
         </a>
         <div className="topbar-note">
           <span className="online-dot" />
@@ -355,14 +398,23 @@ export default function Home() {
         <div className="container page-layout">
           <section className="intro" aria-labelledby="page-title">
             <div className="intro-copy">
-              <div className="eyebrow"><span className="eyebrow-line" /> A LETTER PASSES BY</div>
-              <h1 id="page-title">ことばを、<br /><span>そっとつないで。</span></h1>
+              <div className="eyebrow">
+                <span className="eyebrow-line" /> A LETTER PASSES BY
+              </div>
+              <h1 id="page-title">
+                ことばを、
+                <br />
+                <span>そっとつないで。</span>
+              </h1>
               <p className="intro-description">
-                匿名で便箋をつくり、ひとことを添えて次の人へ。<br />
+                匿名で便箋をつくり、ひとことを添えて次の人へ。
+                <br />
                 返ってくるまで、どんな言葉が届くかはお楽しみ。
               </p>
               <div className="intro-meta">
-                <span className="meta-sparkle" aria-hidden="true">✳</span>
+                <span className="meta-sparkle" aria-hidden="true">
+                  ✳
+                </span>
                 <span>手元にある便箋だけが読めます。</span>
               </div>
             </div>
@@ -373,8 +425,14 @@ export default function Home() {
               <span className="art-star star-one">✳</span>
               <span className="art-star star-two">✦</span>
               <span className="art-star star-three">✧</span>
-              <div className="art-note note-one"><span className="note-face">✉</span><span>お元気ですか？</span></div>
-              <div className="art-note note-two"><span className="note-heart">♡</span><span>ひとこと添えて</span></div>
+              <div className="art-note note-one">
+                <span className="note-face">✉</span>
+                <span>お元気ですか？</span>
+              </div>
+              <div className="art-note note-two">
+                <span className="note-heart">♡</span>
+                <span>ひとこと添えて</span>
+              </div>
             </div>
           </section>
 
@@ -383,12 +441,20 @@ export default function Home() {
               <div className="section-heading">
                 <div>
                   <span className="section-kicker">YOUR LETTER DESK</span>
-                  <h2>便箋のある暮らし <span className="heading-sparkle">✳</span></h2>
+                  <h2>
+                    便箋のある暮らし <span className="heading-sparkle">✳</span>
+                  </h2>
                 </div>
-                <span className="post-count">{board.letters.length}<span> 通</span></span>
+                <span className="post-count">
+                  {board.letters.length}
+                  <span> 通</span>
+                </span>
               </div>
 
-              <section className="credit-panel card" aria-label="クレジット残高">
+              <section
+                className="credit-panel card"
+                aria-label="クレジット残高"
+              >
                 <div>
                   <span className="credit-label">あなたのクレジット</span>
                   <strong className="credit-balance">
@@ -410,7 +476,11 @@ export default function Home() {
                 </span>
               </section>
 
-              <form id="composer" className="composer card" onSubmit={submitLetter}>
+              <form
+                id="composer"
+                className="composer card"
+                onSubmit={submitLetter}
+              >
                 <div className="composer-heading">
                   <div className="avatar avatar-compose">✎</div>
                   <div>
@@ -421,9 +491,13 @@ export default function Home() {
                         : "ことばを便箋にしたためましょう"}
                     </span>
                   </div>
-                  <span className="composer-decoration" aria-hidden="true">✳</span>
+                  <span className="composer-decoration" aria-hidden="true">
+                    ✳
+                  </span>
                 </div>
-                <label className="sr-only" htmlFor="post-body">便箋の内容</label>
+                <label className="sr-only" htmlFor="post-body">
+                  便箋の内容
+                </label>
                 <textarea
                   ref={textareaRef}
                   id="post-body"
@@ -449,7 +523,9 @@ export default function Home() {
                         <img src={emojiUrl(emoji.file)} alt="" />
                       </button>
                     ))}
-                    {emojis.length === 0 && <span className="emoji-empty">登録待ち</span>}
+                    {emojis.length === 0 && (
+                      <span className="emoji-empty">登録待ち</span>
+                    )}
                   </div>
                   <div className="submit-tools">
                     <span className="character-count">{body.length}/1000</span>
@@ -463,7 +539,8 @@ export default function Home() {
                         session.credits < session.settings.createLetterCost
                       }
                     >
-                      {sending ? "作成中…" : "便箋をつくる"} <span aria-hidden="true">↗</span>
+                      {sending ? "作成中…" : "便箋をつくる"}{" "}
+                      <span aria-hidden="true">↗</span>
                     </button>
                   </div>
                 </div>
@@ -471,7 +548,10 @@ export default function Home() {
 
               <div id="inbox" className="feed-heading">
                 <h3>手元にある便箋</h3>
-                <span><span className="feed-dot" />受け取った便箋だけ表示</span>
+                <span>
+                  <span className="feed-dot" />
+                  受け取った便箋だけ表示
+                </span>
               </div>
               {!loading && board.letters.some((letter) => letter.returned) && (
                 <div className="returned-letters-toolbar">
@@ -481,15 +561,21 @@ export default function Home() {
                     disabled={markingAllReturnedRead}
                     onClick={() => void markAllReturnedRead()}
                   >
-                    {markingAllReturnedRead ? "更新中…" : "すべて既読にして折りたたむ"}
+                    {markingAllReturnedRead
+                      ? "更新中…"
+                      : "すべて既読にして折りたたむ"}
                   </button>
                 </div>
               )}
               {loading ? (
-                <div className="feed-state card"><span className="loading-spinner" /> 便箋を確認しています…</div>
+                <div className="feed-state card">
+                  <span className="loading-spinner" /> 便箋を確認しています…
+                </div>
               ) : board.letters.length === 0 ? (
                 <div className="feed-state empty-state card">
-                  <span className="empty-illustration" aria-hidden="true">✉</span>
+                  <span className="empty-illustration" aria-hidden="true">
+                    ✉
+                  </span>
                   <strong>いま手元に便箋はありません</strong>
                   <span>誰かから届くまで、気長にお待ちください。</span>
                 </div>
@@ -506,14 +592,24 @@ export default function Home() {
                     return (
                       <article className="letter-card card" key={letter.id}>
                         <div className="letter-card-heading">
-                          <span className="letter-stamp" aria-hidden="true">✉</span>
+                          <span className="letter-stamp" aria-hidden="true">
+                            ✉
+                          </span>
                           <div className="letter-heading-copy">
-                            <strong>{letter.returned ? "便箋が返ってきました" : "便箋が届きました"}</strong>
-                            <time dateTime={letter.createdAt}>{formatDate(letter.createdAt)} に作成</time>
+                            <strong>
+                              {letter.returned
+                                ? "便箋が返ってきました"
+                                : "便箋が届きました"}
+                            </strong>
+                            <time dateTime={letter.createdAt}>
+                              {formatDate(letter.createdAt)} に作成
+                            </time>
                           </div>
                           {letter.returned && (
                             <>
-                              <span className={`read-status${letter.read ? "" : " unread"}`}>
+                              <span
+                                className={`read-status${letter.read ? "" : " unread"}`}
+                              >
                                 {letter.read ? "既読" : "未読"}
                               </span>
                               <button
@@ -521,7 +617,9 @@ export default function Home() {
                                 type="button"
                                 aria-expanded={!collapsed}
                                 disabled={busy || markingAllReturnedRead}
-                                onClick={() => void toggleReturnedLetter(letter)}
+                                onClick={() =>
+                                  void toggleReturnedLetter(letter)
+                                }
                               >
                                 {collapsed
                                   ? "開く"
@@ -532,7 +630,9 @@ export default function Home() {
                             </>
                           )}
                           {!letter.returned && (
-                            <span className="letter-timer">{formatRemaining(letter.expiresAt, now)}</span>
+                            <span className="letter-timer">
+                              {formatRemaining(letter.expiresAt, now)}
+                            </span>
                           )}
                         </div>
                         {collapsed ? (
@@ -541,14 +641,23 @@ export default function Home() {
                           </p>
                         ) : (
                           <>
-                            <p className="letter-body">{renderBody(letter.body, emojis)}</p>
+                            <p className="letter-body">
+                              {renderBody(letter.body, emojis)}
+                            </p>
                             {letter.notes.length > 0 && (
                               <div className="letter-notes">
-                                <h4>これまでの書き込み（{letter.notes.length}）</h4>
+                                <h4>
+                                  これまでの書き込み（{letter.notes.length}）
+                                </h4>
                                 {letter.notes.map((note, index) => (
-                                  <div className="letter-note" key={`${note.createdAt}-${index}`}>
+                                  <div
+                                    className="letter-note"
+                                    key={`${note.createdAt}-${index}`}
+                                  >
                                     <p>{renderBody(note.text, emojis)}</p>
-                                    <time dateTime={note.createdAt}>{formatDate(note.createdAt)}</time>
+                                    <time dateTime={note.createdAt}>
+                                      {formatDate(note.createdAt)}
+                                    </time>
                                   </div>
                                 ))}
                               </div>
@@ -557,13 +666,21 @@ export default function Home() {
                         )}
                         {!letter.returned && (
                           <div className="letter-controls">
-                            <label className="sr-only" htmlFor={`note-${letter.id}`}>便箋への書き込み</label>
+                            <label
+                              className="sr-only"
+                              htmlFor={`note-${letter.id}`}
+                            >
+                              便箋への書き込み
+                            </label>
                             <textarea
                               id={`note-${letter.id}`}
                               className="letter-reply"
                               ref={(element) => {
                                 if (element) {
-                                  replyTextareaRefs.current.set(letter.id, element);
+                                  replyTextareaRefs.current.set(
+                                    letter.id,
+                                    element,
+                                  );
                                 } else {
                                   replyTextareaRefs.current.delete(letter.id);
                                 }
@@ -580,7 +697,10 @@ export default function Home() {
                               placeholder={`書き込みは任意です。書くと ${writingCost} クレジット消費します。`}
                               disabled={busy}
                             />
-                            <div className="reply-emoji-tools" aria-label="書き込みに絵文字を挿入">
+                            <div
+                              className="reply-emoji-tools"
+                              aria-label="書き込みに絵文字を挿入"
+                            >
                               {emojis.map((emoji) => (
                                 <button
                                   className="emoji-button"
@@ -601,8 +721,14 @@ export default function Home() {
                               <button
                                 className="submit-button secondary-button"
                                 type="button"
-                                disabled={busy || (Boolean(drafts[letter.id]?.trim()) && (session?.credits ?? 0) < writingCost)}
-                                onClick={() => void advanceLetter(letter, "next")}
+                                disabled={
+                                  busy ||
+                                  (Boolean(drafts[letter.id]?.trim()) &&
+                                    (session?.credits ?? 0) < writingCost)
+                                }
+                                onClick={() =>
+                                  void advanceLetter(letter, "next")
+                                }
                               >
                                 {busy ? "回送中…" : "次の人へ流す"}
                               </button>
@@ -612,9 +738,14 @@ export default function Home() {
                                 disabled={
                                   busy ||
                                   (session?.credits ?? 0) <
-                                    returnCost + (drafts[letter.id]?.trim() ? writingCost : 0)
+                                    returnCost +
+                                      (drafts[letter.id]?.trim()
+                                        ? writingCost
+                                        : 0)
                                 }
-                                onClick={() => void advanceLetter(letter, "creator")}
+                                onClick={() =>
+                                  void advanceLetter(letter, "creator")
+                                }
                               >
                                 作成者へ返す
                               </button>
@@ -632,13 +763,19 @@ export default function Home() {
                 <span>書き込み数だけ確認できます</span>
               </div>
               {board.sent.length === 0 ? (
-                <div className="sent-empty card">まだ送った便箋はありません。</div>
+                <div className="sent-empty card">
+                  まだ送った便箋はありません。
+                </div>
               ) : (
                 <div className="sent-list">
                   {board.sent.map((letter) => (
                     <div className="sent-item card" key={letter.id}>
-                      <span className="sent-mark" aria-hidden="true">✉</span>
-                      <span className="sent-count">書き込み {letter.replyCount} 件</span>
+                      <span className="sent-mark" aria-hidden="true">
+                        ✉
+                      </span>
+                      <span className="sent-count">
+                        書き込み {letter.replyCount} 件
+                      </span>
                       <span className="sent-status">
                         {letter.status === "waiting"
                           ? "受取人待ち"
@@ -653,7 +790,9 @@ export default function Home() {
               {error && (
                 <div className="error-message" role="alert">
                   <span>{error}</span>
-                  <button type="button" onClick={() => void loadBoard(true)}>再読み込み</button>
+                  <button type="button" onClick={() => void loadBoard(true)}>
+                    再読み込み
+                  </button>
                 </div>
               )}
             </section>
@@ -661,39 +800,73 @@ export default function Home() {
             <aside className="sidebar">
               <section className="welcome-card card">
                 <span className="welcome-kicker">WELCOME!</span>
-                <h2>手紙のように、<br />人から人へ。</h2>
-                <p>名前は出ません。便箋が手元にある間だけ、それまでの書き込みを読めます。</p>
-                <div className="welcome-doodle" aria-hidden="true"><span>✉</span><i>✳</i><b>♡</b></div>
+                <h2>
+                  手紙のように、
+                  <br />
+                  人から人へ。
+                </h2>
+                <p>
+                  名前は出ません。便箋が手元にある間だけ、それまでの書き込みを読めます。
+                </p>
+                <div className="welcome-doodle" aria-hidden="true">
+                  <span>✉</span>
+                  <i>✳</i>
+                  <b>♡</b>
+                </div>
               </section>
 
               <section id="about" className="guide-card card">
-                <div className="guide-heading"><span className="guide-icon">?</span><h3>便箋の回しかた</h3></div>
+                <div className="guide-heading">
+                  <span className="guide-icon">?</span>
+                  <h3>便箋の回しかた</h3>
+                </div>
                 <ul>
-                  <li><span>01</span>作成にはクレジットを使います</li>
-                  <li><span>02</span>書き込みは受取人ごとに一度だけ</li>
-                  <li><span>03</span>5分たつと自動で次の人へ</li>
-                  <li><span>04</span>作成者に返すと便箋は完了</li>
+                  <li>
+                    <span>01</span>作成にはクレジットを使います
+                  </li>
+                  <li>
+                    <span>02</span>書き込みは受取人ごとに一度だけ
+                  </li>
+                  <li>
+                    <span>03</span>5分たつと自動で次の人へ
+                  </li>
+                  <li>
+                    <span>04</span>作成者に返すと便箋は完了
+                  </li>
                 </ul>
-                <a href="#composer" className="guide-link">便箋をつくる <span aria-hidden="true">→</span></a>
+                <a href="#composer" className="guide-link">
+                  便箋をつくる <span aria-hidden="true">→</span>
+                </a>
               </section>
 
               <section id="emojis" className="emoji-card card">
-                <div className="emoji-card-heading"><span>✿</span><h3>この掲示板の絵文字</h3></div>
+                <div className="emoji-card-heading">
+                  <span>✿</span>
+                  <h3>この掲示板の絵文字</h3>
+                </div>
                 <p>便箋や書き込みに添えられます。</p>
                 <div className="emoji-gallery">
-                  {emojis.slice(0, 8).map((emoji) => (
-                    <span className="emoji-gallery-item" key={emoji.code} title={emoji.label}>
+                  {emojis.map((emoji) => (
+                    <span
+                      className="emoji-gallery-item"
+                      key={emoji.code}
+                      title={`${emoji.label} (:${emoji.code}:)`}
+                    >
                       <img src={emojiUrl(emoji.file)} alt={emoji.label} />
                     </span>
                   ))}
-                  {emojis.length === 0 && <span className="emoji-empty">絵文字を準備中です</span>}
+                  {emojis.length === 0 && (
+                    <span className="emoji-empty">絵文字を準備中です</span>
+                  )}
                 </div>
               </section>
             </aside>
           </div>
 
           <footer className="site-footer">
-            <span>ことのは便箋 <span className="footer-sparkle">✳</span></span>
+            <span>
+              ことのは便箋 <span className="footer-sparkle">✳</span>
+            </span>
             <span>ことばが、よいことのはになりますように。</span>
           </footer>
         </div>
