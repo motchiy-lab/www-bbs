@@ -2,7 +2,7 @@
   "maxCredits": 180,
   "initialCredits": 60,
   "creditsPerRegen": 1,
-  "regenIntervalSeconds": 180,
+  "regenIntervalSeconds": 120,
   "createLetterCost": 30,
   "returnLetterCost": 10,
   "writeCost": 5,
