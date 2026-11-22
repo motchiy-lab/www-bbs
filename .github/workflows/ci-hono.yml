@@ -12,7 +12,7 @@ on:
 
 jobs:
   test-and-build:
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted, hono]
     defaults:
       run:
         working-directory: server
@@ -27,7 +27,7 @@ jobs:
       - name: Test
         run: |
           npm run typecheck
-          npm test:react
+          npm run test:react
 
       - name: Build
         run: npm run build
