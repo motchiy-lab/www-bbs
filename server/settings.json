@@ -3,7 +3,7 @@
   "initialCredits": 90,
   "creditsPerRegen": 1,
   "regenIntervalSeconds": 180,
-  "createLetterCost": 20,
+  "createLetterCost": 30,
   "returnLetterCost": 10,
   "writeCost": 5,
   "recipientTimeoutSeconds": 180,
