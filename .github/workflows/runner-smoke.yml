@@ -5,7 +5,7 @@ on:
 
 jobs:
   smoke:
-    runs-on: [self-hosted, linux] # 追加ラベルを付けた場合はそこに合わせて調整
+    runs-on: [self-hosted] # 追加ラベルを付けた場合はそこに合わせて調整
     steps:
       - name: Checkout
         uses: actions/checkout@v4
