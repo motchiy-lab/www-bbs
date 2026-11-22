@@ -64,5 +64,10 @@
     "code": "geo",
     "label": "岩元素",
     "file": "element_geo.png"
+  },
+  {
+    "code": "anemo",
+    "label": "風元素",
+    "file": "element_anemo.png"
   }
 ]
