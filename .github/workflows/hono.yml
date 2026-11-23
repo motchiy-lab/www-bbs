@@ -2,50 +2,66 @@ name: Hono
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
     paths:
       - "server/**"
       - ".github/workflows/**"
   pull_request:
-    branches: [main]
+    branches: [ main ]
     paths:
       - "server/**"
       - ".github/workflows/**"
 
 jobs:
-  test-and-build:
+  test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
       - name: Install dependencies
         run: npm ci
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Test
-        run: |
-          npm run typecheck
-          npm run test:hono
+        run: npm run test:hono
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build
         run: npm run build
 
   deploy:
-    if: >
-      ${{
-        github.event.workflow_run.conclusion == 'success'
-        && github.event.workflow_run.event == 'push'
-        && github.event.workflow_run.head_branch == 'main'
-      }}
+    needs: [ test, build ]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, hono]
 
     env:
-      DEPLOY_BRANCH: ${{ github.event.workflow_run.head_branch }}
-      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+      DEPLOY_BRANCH: ${{ github.ref_name }}
+      DEPLOY_SHA: ${{ github.sha }}
       SERVICE_NAME: www-bbs-api.service
 
     steps:
