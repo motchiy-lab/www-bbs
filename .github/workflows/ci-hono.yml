@@ -29,7 +29,7 @@ jobs:
       - name: Test
         run: |
           npm run typecheck
-          npm run test:react
+          npm run test:hono
 
       - name: Build
         run: npm run build
