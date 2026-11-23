@@ -1,4 +1,4 @@
-@import "tailwindcss" source(".");
+@import "tailwindcss";
 
 :root {
   --primary-color: #504e7f;
@@ -547,9 +547,10 @@ textarea:focus-visible {
 
 .composer-footer {
   min-height: 40px;
-  margin-top: 7px;
-  display: flex;
+  align-items: flex-end;
   align-items: center;
+  display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
 }
@@ -561,6 +562,7 @@ textarea:focus-visible {
 }
 
 .emoji-tools {
+  flex-wrap: wrap;
   gap: 4px;
 }
 
@@ -1357,10 +1359,6 @@ textarea:focus-visible {
 
   .composer {
     padding: 14px 11px 10px;
-  }
-
-  .composer-footer {
-    align-items: flex-end;
   }
 
   .credit-panel {
