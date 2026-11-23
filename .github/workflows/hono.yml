@@ -36,6 +36,7 @@ jobs:
         run: npm run test:hono
 
   build:
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
