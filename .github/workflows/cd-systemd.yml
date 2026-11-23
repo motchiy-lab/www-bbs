@@ -19,16 +19,45 @@ jobs:
     if: >
       ${{
         github.event.workflow_run.conclusion == 'success'
+        && github.event.workflow_run.event == 'push'
+        && github.event.workflow_run.head_branch == 'main'
       }}
 
     steps:
-      - name: Checkout repository at commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
-      - name: Prepare build artifacts
+      - name: Pull and build the deployed repository
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
         run: |
+          set -euo pipefail
+
+          service_dir="$(systemctl show --property=WorkingDirectory --value www-bbs-api.service)"
+          if [[ -z "$service_dir" || ! -d "$service_dir" ]]; then
+            echo "www-bbs-api.service must have a valid WorkingDirectory inside the deployed repository."
+            exit 1
+          fi
+
+          repo_dir="$(git -C "$service_dir" rev-parse --show-toplevel)"
+          if ! git -C "$repo_dir" remote get-url origin | grep -Fq "$GITHUB_REPOSITORY"; then
+            echo "The service repository's origin does not match $GITHUB_REPOSITORY."
+            exit 1
+          fi
+
+          git -C "$repo_dir" fetch --no-tags origin main
+          fetched_sha="$(git -C "$repo_dir" rev-parse FETCH_HEAD)"
+          if [[ "$fetched_sha" != "$DEPLOY_SHA" ]]; then
+            echo "Skipping stale deployment for $DEPLOY_SHA; origin/main is now $fetched_sha."
+            exit 0
+          fi
+
+          git -C "$repo_dir" pull --ff-only origin main
+          deployed_sha="$(git -C "$repo_dir" rev-parse HEAD)"
+          if [[ "$deployed_sha" != "$DEPLOY_SHA" ]]; then
+            echo "Expected $DEPLOY_SHA after pull, but found $deployed_sha."
+            exit 1
+          fi
+
+          cd "$repo_dir"
           npm ci
           npm run build
 

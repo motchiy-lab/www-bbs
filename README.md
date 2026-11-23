@@ -66,6 +66,8 @@ Cloudflare Workersの静的アセットと絵文字画像は `/assets/` と `/em
 Node.js 22以降を用意し、このリポジトリをサーバーへ配置して `npm ci` を実行します。`.env.api` に次の値を設定し、`npm run start:api` で起動してください。
 接続先MongoDBは、レプリカセット構成でない単体サーバーでも利用できます。
 
+GitHub ActionsのCDは、`www-bbs-api.service` の `WorkingDirectory` からこのリポジトリを特定し、`main` のPush後にサーバー上で `git pull` してAPIを再起動します。サービスの `WorkingDirectory` はリポジトリ内に設定し、実行ユーザーが `origin` からFetch/Pullできるようにしてください。
+
 - `MONGODB_URI`: MongoDB接続URI。ユーザー名・パスワードに `$ : / ? # [ ] @ %` などURIの予約文字が含まれる場合は、URLエンコードしてから設定します（例: `@` は `%40`、`:` は `%3A`、`/` は `%2F`、`%` は `%25`）。
 - `MONGODB_DB`: 使用するデータベース名
 - `PORT`: APIが待ち受けるポート（省略時 `8787`）
