@@ -66,7 +66,8 @@ jobs:
       SERVICE_NAME: www-bbs-api.service
 
     steps:
-      - name: Pull, build, and restart the systemd service
+      - name: Locate deployed repository
+        id: repository
         shell: bash
         run: |
           set -euo pipefail
@@ -78,29 +79,71 @@ jobs:
           fi
 
           repo_dir="$(git -C "$service_dir" rev-parse --show-toplevel)"
-          if ! git -C "$repo_dir" remote get-url origin | grep -Fq "$GITHUB_REPOSITORY"; then
+          echo "repo_dir=$repo_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Verify repository origin
+        env:
+          REPO_DIR: ${{ steps.repository.outputs.repo_dir }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! git -C "$REPO_DIR" remote get-url origin | grep -Fq "$GITHUB_REPOSITORY"; then
             echo "The service repository's origin does not match $GITHUB_REPOSITORY."
             exit 1
           fi
 
-          git -C "$repo_dir" fetch --no-tags origin "$DEPLOY_BRANCH"
-          fetched_sha="$(git -C "$repo_dir" rev-parse FETCH_HEAD)"
+      - name: Fetch deployment branch
+        env:
+          REPO_DIR: ${{ steps.repository.outputs.repo_dir }}
+        run: git -C "$REPO_DIR" fetch --no-tags origin "$DEPLOY_BRANCH"
+
+      - name: Check for stale deployment
+        id: deployment
+        env:
+          REPO_DIR: ${{ steps.repository.outputs.repo_dir }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fetched_sha="$(git -C "$REPO_DIR" rev-parse FETCH_HEAD)"
           if [[ "$fetched_sha" != "$DEPLOY_SHA" ]]; then
             echo "Skipping stale deployment for $DEPLOY_SHA; origin/$DEPLOY_BRANCH is now $fetched_sha."
+            echo "current=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          git -C "$repo_dir" pull --ff-only origin "$DEPLOY_BRANCH"
-          deployed_sha="$(git -C "$repo_dir" rev-parse HEAD)"
+          echo "current=true" >> "$GITHUB_OUTPUT"
+
+      - name: Update deployed repository
+        if: steps.deployment.outputs.current == 'true'
+        env:
+          REPO_DIR: ${{ steps.repository.outputs.repo_dir }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git -C "$REPO_DIR" pull --ff-only origin "$DEPLOY_BRANCH"
+          deployed_sha="$(git -C "$REPO_DIR" rev-parse HEAD)"
           if [[ "$deployed_sha" != "$DEPLOY_SHA" ]]; then
             echo "Expected $DEPLOY_SHA after pull, but found $deployed_sha."
             exit 1
           fi
 
-          cd "$repo_dir"
-          npm ci
-          npm run build
+      - name: Install dependencies
+        if: steps.deployment.outputs.current == 'true'
+        run: npm ci
+        working-directory: ${{ steps.repository.outputs.repo_dir }}
 
-          systemctl is-active --quiet "$SERVICE_NAME" && echo "$SERVICE_NAME is active"
-          sudo -n /usr/bin/systemctl restart "$SERVICE_NAME"
-          systemctl is-active --quiet "$SERVICE_NAME"
+      - name: Build
+        if: steps.deployment.outputs.current == 'true'
+        run: npm run build
+        working-directory: ${{ steps.repository.outputs.repo_dir }}
+
+      - name: Restart service
+        if: steps.deployment.outputs.current == 'true'
+        run: sudo -n /usr/bin/systemctl restart "$SERVICE_NAME"
+
+      - name: Verify service is active
+        if: steps.deployment.outputs.current == 'true'
+        run: systemctl is-active --quiet "$SERVICE_NAME"
