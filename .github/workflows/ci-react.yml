@@ -14,7 +14,7 @@ on:
 
 jobs:
   test-and-build:
-    runs-on: [self-hosted, react]
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: .
