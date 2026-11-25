@@ -43,6 +43,7 @@ const positiveSettings = [
   "recipientTimeoutSeconds",
   "onlineWindowSeconds",
   "maxConcurrentReceivedLetters",
+  "sendBackDays",
 ];
 if (
   positiveSettings.some(
@@ -278,7 +279,8 @@ async function chooseNextRecipient(post, now = new Date()) {
     (candidate) =>
       candidate.lastSeenAt instanceof Date && candidate.lastSeenAt >= onlineAfter,
   );
-  return chooseRandom(online.length > 0 ? online : availableCandidates);
+  // return chooseRandom(online.length > 0 ? online : availableCandidates);
+  return chooseRandom(online);
 }
 
 async function dispatchWaitingLetters() {
@@ -375,6 +377,50 @@ async function sweepLetters() {
   sweepPromise = (async () => {
     try {
       const now = new Date();
+      
+      const forceReturnBefore = new Date(
+        now.getTime() - settings.sendBackDays * 24 * 60 * 60 * 1000,
+      );
+      
+      const staleCandidates = await posts
+        .find({
+          version: 2,
+          status: { $in: ["waiting", "active"] },
+          createdAt: { $lte: forceReturnBefore },
+        })
+        .project({ _id: 1, creatorId: 1, createdAt: 1, notes: 1 })
+        .toArray();
+      
+      for (const post of staleCandidates) {
+        const notes = Array.isArray(post.notes) ? post.notes : [];
+        const lastActivityAt =
+          notes.length > 0 ? notes[notes.length - 1].createdAt : post.createdAt;
+      
+        if (!(lastActivityAt instanceof Date) || lastActivityAt > forceReturnBefore) {
+          continue;
+        }
+      
+        await withRecipientAssignmentLock(async () => {
+          await posts.updateOne(
+            {
+              _id: post._id,
+              version: 2,
+              status: { $in: ["waiting", "active"] },
+              notes: { $size: notes.length },
+            },
+            {
+              $set: {
+                status: "completed",
+                currentRecipientId: post.creatorId,
+                expiresAt: null,
+                returnedAt: now,
+                creatorReadAt: null,
+              },
+            },
+          );
+        });
+      }
+
       const expired = await posts
         .find({
           version: 2,
