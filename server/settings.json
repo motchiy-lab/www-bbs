@@ -8,5 +8,6 @@
   "writeCost": 5,
   "recipientTimeoutSeconds": 180,
   "onlineWindowSeconds": 45,
-  "maxConcurrentReceivedLetters": 1
+  "maxConcurrentReceivedLetters": 1,
+  "sendBackDays": 7
 }
