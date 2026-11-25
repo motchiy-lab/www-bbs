@@ -804,6 +804,7 @@ textarea:focus-visible {
   margin: 0 2px;
   vertical-align: middle;
   object-fit: contain;
+  display: inline-block;
 }
 
 .post-reaction {
