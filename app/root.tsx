@@ -55,9 +55,19 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 
   return (
     <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      <p><a href="/">トップページへ戻る</a>か、<a href="https://www.motchiy.com/contact/">お問い合わせフォーム</a>から連絡ができます。</p>
+      <h1 className="text-3xl font-bold mb-4">{message}</h1>
+      <p className="mb-4">{details}</p>
+      <p>
+        <a href="/"
+          className="text-blue-600 underline hover:text-blue-800">
+          トップページへ戻る
+        </a>
+        か、
+        <a href="https://www.motchiy.com/contact/"
+          className="text-blue-600 underline hover:text-blue-800">
+          お問い合わせフォーム
+        </a>
+        から連絡ができます。</p>
       {stack && (
         <pre className="w-full p-4 overflow-x-auto">
           <code>{stack}</code>
