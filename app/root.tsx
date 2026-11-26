@@ -38,15 +38,15 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
+  let message = "なんてこった！";
+  let details = "予期しないエラーが発生してしまったようです。";
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
+    message = error.status === 404 ? "404 Not Found" : "Error";
     details =
       error.status === 404
-        ? "The requested page could not be found."
+        ? "アクセスしようとしたページが見つかりませんでした。"
         : error.statusText || details;
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message;
@@ -57,6 +57,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     <main className="pt-16 p-4 container mx-auto">
       <h1>{message}</h1>
       <p>{details}</p>
+      <p><a href=\"/\">トップページへ戻る</a>か、<a href=\"https://www.motchiy.com/contact/\">お問い合わせフォーム</a>から連絡ができます。</p>
       {stack && (
         <pre className="w-full p-4 overflow-x-auto">
           <code>{stack}</code>
