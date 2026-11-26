@@ -57,7 +57,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     <main className="pt-16 p-4 container mx-auto">
       <h1>{message}</h1>
       <p>{details}</p>
-      <p><a href=\"/\">トップページへ戻る</a>か、<a href=\"https://www.motchiy.com/contact/\">お問い合わせフォーム</a>から連絡ができます。</p>
+      <p><a href="/">トップページへ戻る</a>か、<a href="https://www.motchiy.com/contact/">お問い合わせフォーム</a>から連絡ができます。</p>
       {stack && (
         <pre className="w-full p-4 overflow-x-auto">
           <code>{stack}</code>
